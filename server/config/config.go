@@ -14,6 +14,8 @@ type config struct {
 	Auth      map[string]string `json:"auth"`
 	Log       *log              `json:"log"`
 	SaltBytes []byte            `json:"-"`
+	// TODO: change
+	DeviceInfoFile string `json:"device_info_file"`
 }
 type log struct {
 	Level string `json:"level"`
@@ -36,6 +38,7 @@ func init() {
 		username, password       string
 		logLevel, logPath        string
 		logDays                  uint
+		deviceInfoFile           string
 	)
 	flag.StringVar(&configPath, `config`, `config.json`, `config file path, default: config.json`)
 	flag.StringVar(&listen, `listen`, `:8000`, `required, listen address, default: :8000`)
@@ -45,6 +48,7 @@ func init() {
 	flag.StringVar(&logLevel, `log-level`, `info`, `log level, default: info`)
 	flag.StringVar(&logPath, `log-path`, `./logs`, `log file path, default: ./logs`)
 	flag.UintVar(&logDays, `log-days`, 7, `max days of logs, default: 7`)
+	flag.StringVar(&deviceInfoFile, `device_info_file`, "device_info.json", `file to store device info`)
 	flag.Parse()
 
 	if len(configPath) > 0 {
@@ -102,6 +106,8 @@ func init() {
 	Config.SaltBytes = []byte(Config.Salt)
 	Config.SaltBytes = append(Config.SaltBytes, bytes.Repeat([]byte{25}, 24)...)
 	Config.SaltBytes = Config.SaltBytes[:24]
+
+	Config.DeviceInfoFile = deviceInfoFile
 
 	golog.SetLevel(utils.If(len(Config.Log.Level) == 0, `info`, Config.Log.Level))
 }

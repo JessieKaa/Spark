@@ -4,6 +4,7 @@ import (
 	"Spark/modules"
 	"Spark/server/common"
 	"Spark/server/config"
+	"Spark/server/embed/devices"
 	"Spark/utils"
 	"Spark/utils/melody"
 	"bytes"
@@ -88,12 +89,21 @@ func OnDevicePack(data []byte, session *melody.Session) error {
 		if len(exSession) > 0 {
 			common.Devices.Remove(exSession)
 		}
+		pack.Device.OfflineTime = 0
 		common.Devices.Set(session.UUID, &pack.Device)
 		common.Info(nil, `CLIENT_ONLINE`, ``, ``, map[string]any{
 			`device`: map[string]any{
 				`name`: pack.Device.Hostname,
 				`ip`:   pack.Device.WAN,
 			},
+		})
+		go devices.WriteDeviceInfo(&devices.DeviceInfo{
+			ID:       pack.Device.ID,
+			Os:       pack.Device.OS,
+			Arch:     pack.Device.Arch,
+			Hostname: pack.Device.Hostname,
+			Username: pack.Device.Username,
+			Remark:   pack.Device.Remark,
 		})
 	} else {
 		val, ok := common.Devices.Get(session.UUID)

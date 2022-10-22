@@ -12,6 +12,7 @@ type Cfg struct {
 	Path   string `json:"path"`
 	UUID   string `json:"uuid"`
 	Key    string `json:"key"`
+	Remark string `json:"remark"`
 }
 
 // Localhost for my development only.

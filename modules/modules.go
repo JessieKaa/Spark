@@ -19,20 +19,22 @@ type CommonPack struct {
 }
 
 type Device struct {
-	ID       string `json:"id"`
-	OS       string `json:"os"`
-	Arch     string `json:"arch"`
-	LAN      string `json:"lan"`
-	WAN      string `json:"wan"`
-	MAC      string `json:"mac"`
-	Net      Net    `json:"net"`
-	CPU      CPU    `json:"cpu"`
-	RAM      IO     `json:"ram"`
-	Disk     IO     `json:"disk"`
-	Uptime   uint64 `json:"uptime"`
-	Latency  uint   `json:"latency"`
-	Hostname string `json:"hostname"`
-	Username string `json:"username"`
+	Remark      string `json:"remark"`
+	ID          string `json:"id"`
+	OS          string `json:"os"`
+	Arch        string `json:"arch"`
+	LAN         string `json:"lan"`
+	WAN         string `json:"wan"`
+	MAC         string `json:"mac"`
+	Net         Net    `json:"net"`
+	CPU         CPU    `json:"cpu"`
+	RAM         IO     `json:"ram"`
+	Disk        IO     `json:"disk"`
+	Uptime      uint64 `json:"uptime"`
+	Latency     uint   `json:"latency"`
+	Hostname    string `json:"hostname"`
+	Username    string `json:"username"`
+	OfflineTime int64  `json:"offline_time"`
 }
 
 type IO struct {

@@ -15,6 +15,10 @@
 	"COMMON.MINUTES": "m",
 	"COMMON.COLON": ": ",
 
+	"STATUS.DEVICE_ONLINE": "Online",
+
+	"OVERVIEW.REMARK": "Remark",
+	"OVERVIEW.OFFLINE_TIME": "Offline Time",
 	"OVERVIEW.HOSTNAME": "Hostname",
 	"OVERVIEW.USERNAME": "Username",
 	"OVERVIEW.CPU_USAGE": "CPU Usage",
@@ -96,6 +100,7 @@
 	"GENERATOR.PORT": "Port",
 	"GENERATOR.PATH": "Path",
 	"GENERATOR.OS_ARCH": "OS / Arch",
+	"GENERATOR.REMARK": "Remark",
 	"GENERATOR.NO_PREBUILT_FOUND": "The OS or Arch is not prebuilt",
 	"GENERATOR.CONFIG_GENERATE_FAILED": "Failed to generate client config",
 	"GENERATOR.CONFIG_TOO_LARGE": "Config is too large",

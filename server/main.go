@@ -205,6 +205,8 @@ func wsOnDisconnect(session *melody.Session) {
 				`ip`:   deviceInfo.WAN,
 			},
 		})
+		// save devices if offline
+		deviceInfo.OfflineTime = time.Now().Unix()
 	} else {
 		common.Info(nil, `CLIENT_OFFLINE`, ``, ``, map[string]any{
 			`device`: map[string]any{
@@ -212,12 +214,13 @@ func wsOnDisconnect(session *melody.Session) {
 			},
 		})
 	}
-	common.Devices.Remove(session.UUID)
+	// save devices if offline
+	//common.Devices.Remove(session.UUID)
 }
 
 func wsHealthCheck(container *melody.Melody) {
-	const MaxIdleSeconds = 150
-	const MaxPingInterval = 60
+	const MaxIdleSeconds = 300
+	const MaxPingInterval = 120
 	go func() {
 		// Ping clients with a dynamic interval.
 		// Interval will be greater than 3 seconds and less than MaxPingInterval.

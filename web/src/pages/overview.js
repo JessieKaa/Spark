@@ -50,6 +50,21 @@ function overview(props) {
 
 	const columns = [
 		{
+			key: 'remark',
+			title: i18n.t('OVERVIEW.REMARK'),
+			dataIndex: 'remark',
+			ellipsis: true,
+			width: 100
+		},
+		{
+			key: 'offline_time',
+			title: i18n.t('OVERVIEW.OFFLINE_TIME'),
+			dataIndex: 'offline_time',
+			ellipsis: true,
+			renderText: (_, v) => renderOfflineStat(v.offline_time),
+			width: 100
+		},
+		{
 			key: 'hostname',
 			title: i18n.t('OVERVIEW.HOSTNAME'),
 			dataIndex: 'hostname',
@@ -268,6 +283,13 @@ function overview(props) {
 				units = ['Kbps', 'Mbps', 'Gbps', 'Tbps'];
 			return (size / Math.pow(k, i)).toFixed(1) + ' ' + units[i];
 		}
+	}
+	function renderOfflineStat(offlineTime) {
+		if (offlineTime > 0){
+			let diff = (new Date().getTime() / 1000) - offlineTime
+			return tsToTime(diff)
+		}
+		return i18n.t('STATUS.DEVICE_ONLINE')
 	}
 	function renderOperation(device) {
 		let menus = [

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"Spark/client/config"
 	"Spark/modules"
 	"crypto/rand"
 	"encoding/hex"
@@ -245,6 +246,7 @@ func GetDevice() (*modules.Device, error) {
 		Uptime:   uptime,
 		Hostname: hostname,
 		Username: username.Username,
+		Remark:   config.Config.Remark,
 	}, nil
 }
 
