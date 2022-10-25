@@ -39,6 +39,7 @@ func init() {
 		logLevel, logPath        string
 		logDays                  uint
 		deviceInfoFile           string
+		builtPath                string
 	)
 	flag.StringVar(&configPath, `config`, `config.json`, `config file path, default: config.json`)
 	flag.StringVar(&listen, `listen`, `:8000`, `required, listen address, default: :8000`)
@@ -49,6 +50,7 @@ func init() {
 	flag.StringVar(&logPath, `log-path`, `./logs`, `log file path, default: ./logs`)
 	flag.UintVar(&logDays, `log-days`, 7, `max days of logs, default: 7`)
 	flag.StringVar(&deviceInfoFile, `device_info_file`, "device_info.json", `file to store device info`)
+	flag.StringVar(&builtPath, `built_path`, "./built/%v_%v", `path to store built file`)
 	flag.Parse()
 
 	if len(configPath) > 0 {
@@ -108,6 +110,7 @@ func init() {
 	Config.SaltBytes = Config.SaltBytes[:24]
 
 	Config.DeviceInfoFile = deviceInfoFile
+	BuiltPath = builtPath
 
 	golog.SetLevel(utils.If(len(Config.Log.Level) == 0, `info`, Config.Log.Level))
 }
