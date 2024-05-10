@@ -1,3 +1,31 @@
+## v0.2.1
+
+* Fix: desktop connection timeout.
+* Fix: desktop viewer doesn't work on unix-like system.
+* Add: show resolution of desktop.
+
+* 修复：远程桌面连接超时。
+* 修复：远程桌面在类unix系统下无法显示。
+* 新增：显示远程桌面的分辨率。
+
+
+
+## v0.2.0
+
+* Add: zmodem(lrzsz) support for terminal.
+* Add: update notification (won't auto update).
+* Optimize: protocol of terminal and desktop.
+* Optimize: experience of explorer.
+* Remove: CryptoJS.
+
+* 新增：终端支持zmodem协议（lrzsz）。
+* 新增：版本更新通知（不会自动更新）。
+* 优化：终端和桌面端的通信协议。
+* 优化：文件管理器的使用体验。
+* 移除：CryptoJS。
+
+
+
 ## v0.1.9
 
 * Add: special keys for terminal.

@@ -162,17 +162,17 @@ func (m *Melody) HandleClose(fn func(*Session, int, string) error) {
 }
 
 // HandleRequest upgrades http requests to websocket connections and dispatches them to be handled by the melody instance.
-func (m *Melody) HandleRequest(w http.ResponseWriter, r *http.Request, header http.Header) error {
-	return m.HandleRequestWithKeys(w, r, header, nil)
+func (m *Melody) HandleRequest(w http.ResponseWriter, r *http.Request) error {
+	return m.HandleRequestWithKeys(w, r, nil)
 }
 
 // HandleRequestWithKeys does the same as HandleRequest but populates session.Keys with keys.
-func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, header http.Header, keys map[string]interface{}) error {
+func (m *Melody) HandleRequestWithKeys(w http.ResponseWriter, r *http.Request, keys map[string]interface{}) error {
 	if m.hub.closed() {
 		return errors.New("melody instance is closed")
 	}
 
-	conn, err := m.Upgrader.Upgrade(w, r, header)
+	conn, err := m.Upgrader.Upgrade(w, r, w.Header())
 
 	if err != nil {
 		return err
@@ -301,27 +301,14 @@ func (m *Melody) SendMultiple(msg []byte, list []string) error {
 
 // GetSessionByUUID returns the session with specified uuid.
 func (m *Melody) GetSessionByUUID(uuid string) (*Session, bool) {
-	val, ok := m.hub.sessions.Get(uuid)
-	if !ok {
-		return nil, false
-	}
-	s, ok := val.(*Session)
-	if !ok {
-		m.hub.sessions.Remove(uuid)
-	}
-	return s, ok
+	return m.hub.sessions.Get(uuid)
 }
 
 // IterSessions iterates all sessions.
 func (m *Melody) IterSessions(fn func(uuid string, s *Session) bool) {
 	var invalid []string
-	m.hub.sessions.IterCb(func(uuid string, v interface{}) bool {
-		if s, ok := v.(*Session); !ok {
-			invalid = append(invalid, uuid)
-			return true
-		} else {
-			return fn(uuid, s)
-		}
+	m.hub.sessions.IterCb(func(uuid string, s *Session) bool {
+		return fn(uuid, s)
 	})
 	m.hub.sessions.Remove(invalid...)
 }

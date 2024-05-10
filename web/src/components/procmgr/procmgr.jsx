@@ -1,10 +1,10 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Button, message, Popconfirm} from "antd";
 import ProTable from '@ant-design/pro-table';
-import {request, waitTime} from "../utils/utils";
-import i18n from "../locale/locale";
+import {request, waitTime} from "../../utils/utils";
+import i18n from "../../locale/locale";
 import {VList} from "virtuallist-antd";
-import DraggableModal from "./modal";
+import DraggableModal from "../modal";
 import {ReloadOutlined} from "@ant-design/icons";
 
 function ProcessMgr(props) {
@@ -47,10 +47,10 @@ function ProcessMgr(props) {
 		})
 	}, []);
 	useEffect(() => {
-		if (props.visible) {
+		if (props.open) {
 			setLoading(false);
 		}
-	}, [props.device, props.visible]);
+	}, [props.device, props.open]);
 
 	function renderOperation(proc) {
 		return [
@@ -65,7 +65,7 @@ function ProcessMgr(props) {
 	}
 
 	function killProcess(pid) {
-		request(`/api/device/process/kill`, {pid: pid, device: props.device}).then(res => {
+		request(`/api/device/process/kill`, {pid: pid, device: props.device.id}).then(res => {
 			let data = res.data;
 			if (data.code === 0) {
 				message.success(i18n.t('PROCMGR.KILL_PROCESS_SUCCESSFULLY'));
@@ -76,7 +76,7 @@ function ProcessMgr(props) {
 
 	async function getData(form) {
 		await waitTime(300);
-		let res = await request('/api/device/process/list', {device: props.device});
+		let res = await request('/api/device/process/list', {device: props.device.id});
 		setLoading(false);
 		let data = res.data;
 		if (data.code === 0) {

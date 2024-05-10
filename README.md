@@ -24,6 +24,14 @@ server forever.
 
 ---
 
+## Notice
+
+Due to my busy schedule with personal matters and the abuse of this project for cyberattacks, it's going to reach its end of life and will be archived very soon.
+
+I will no longer provide any support for this project, as it is officially abandoned.
+
+---
+
 ## Disclaimer
 
 **THIS PROJECT, ITS SOURCE CODE, AND ITS RELEASES SHOULD ONLY BE USED FOR EDUCATIONAL PURPOSES.**
@@ -35,6 +43,8 @@ server forever.
 **THE AUTHORS AND DEVELOPERS ARE NOT RESPONSIBLE FOR ANY DAMAGE CAUSED BY YOUR MISUSE OF THIS PROJECT.**
 
 **YOUR DATA IS PRICELESS. THINK TWICE BEFORE YOU CLICK ANY BUTTON OR ENTER ANY COMMAND.**
+
+If you found any security vulnerability, please **DO NOT** open an issue and immediately contact me via [**email**](mailto:i@1248.ink).
 
 ---
 
@@ -59,7 +69,7 @@ Example:
   ```json
   {
       "listen": ":8000",
-      "salt": "123456abcdefg",
+      "salt": "123456abcdef",
       "auth": {
           "username": "password"
       },
@@ -76,7 +86,7 @@ Example:
   * after modification, you need to re-generate all clients
 * `auth` `optional`, format: `username:password`
   * hashed-password is highly recommended
-  * format: `$algorithm$hashed-password`, example: `$sha256$123456abcdefg`
+  * format: `$algorithm$hashed-password`, example: `$sha256$11223344556677AABBCCDDEEFF`
   * supported algorithms: `sha256`, `sha512`, `bcrypt`
   * if you don't follow the format, password will be treated as plain-text
 * `log` `optional`
@@ -116,19 +126,19 @@ Example:
 
 ## Screenshots
 
-![overview](./screenshots/overview.png)
+![overview](./docs/overview.png)
 
-![terminal](./screenshots/terminal.png)
+![terminal](./docs/terminal.png)
 
-![desktop](./screenshots/desktop.png)
+![desktop](./docs/desktop.png)
 
-![procmgr](./screenshots/procmgr.png)
+![procmgr](./docs/procmgr.png)
 
-![explorer](./screenshots/explorer.png)
+![explorer](./docs/explorer.png)
 
-![overview.cpu](./screenshots/overview.cpu.png)
+![overview.cpu](./docs/overview.cpu.png)
 
-![explorer.editor](./screenshots/explorer.editor.png)
+![explorer.editor](./docs/explorer.editor.png)
 
 ---
 

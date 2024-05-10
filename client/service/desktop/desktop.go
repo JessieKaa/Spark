@@ -33,38 +33,39 @@ type message struct {
 	frame *[]*[]byte
 }
 
-// +---------+---------+----------+----------+------------+---------+---------+---------+---------+-------+
-// | magic   | OP code | event id | img type | img length | x       | y       | width   | height  | image |
-// +---------+---------+----------+----------+------------+---------+---------+---------+---------+-------+
-// | 5 bytes | 1 byte  | 16 bytes | 2 bytes  | 2 bytes    | 2 bytes | 2 bytes | 2 bytes | 2 bytes | -     |
-// +---------+---------+----------+----------+------------+---------+---------+---------+---------+-------+
+// frame packet format:
+// +---------+---------+----------+-------------+----------+---------+---------+---------+---------+-------+
+// | magic   | op code | event id | body length | img type | x       | y       | width   | height  | image |
+// +---------+---------+----------+-------------+----------+---------+---------+---------+---------+-------+
+// | 5 bytes | 1 byte  | 16 bytes | 2 bytes     | 2 bytes  | 2 bytes | 2 bytes | 2 bytes | 2 bytes | -     |
+// +---------+---------+----------+-------------+----------+---------+---------+---------+---------+-------+
 
 // magic:
 // []byte{34, 22, 19, 17, 20}
 
-// OP code:
-// 00: first part of a frame
-// 01: rest parts of a frame
-// 02: set resolution of every frame
-// 03: JSON string (only for server)
+// op code:
+// 00: first part of a frame, device -> browser
+// 01: rest parts of a frame, device -> browser
+// 02: set resolution of every frame, device -> browser
+// 03: JSON string, server -> browser
 
 // img type:
 // 0: raw image
 // 1: compressed image (jpeg)
 
-const fpsLimit = 10
-const compress = true
-const blockSize = 64
+const compress = 1
+const fpsLimit = 24
+const blockSize = 96
 const frameBuffer = 3
 const displayIndex = 0
 const imageQuality = 70
 
 var lock = &sync.Mutex{}
 var working = false
-var sessions = cmap.New()
+var sessions = cmap.New[*session]()
 var prevDesktop *image.RGBA
 var displayBounds image.Rectangle
-var ErrNoImage = errors.New(`DESKTOP.NO_IMAGE_YET`)
+var errNoImage = errors.New(`DESKTOP.NO_IMAGE_YET`)
 
 func init() {
 	go healthCheck()
@@ -82,69 +83,70 @@ func worker() {
 	lock.Unlock()
 
 	var (
-		screen screen
-		img    *image.RGBA
-		err    error
-		errors int
+		numErrors int
+		screen    Screen
+		img       *image.RGBA
+		err       error
 	)
-	screen.init(displayIndex)
+	screen.Init(displayIndex, displayBounds)
 	for working {
 		if sessions.Count() == 0 {
-			lock.Lock()
-			working = false
-			lock.Unlock()
 			break
 		}
-		img = image.NewRGBA(displayBounds)
-		err = screen.capture(img, displayBounds)
+		img, err = screen.Capture()
 		if err != nil {
-			if err == ErrNoImage {
-				return
+			if err == errNoImage {
+				<-time.After(time.Second / fpsLimit)
+				continue
 			}
-			errors++
-			if errors > 10 {
+			numErrors++
+			if numErrors > 10 {
 				break
 			}
 		} else {
-			errors = 0
+			numErrors = 0
 			diff := imageCompare(img, prevDesktop, compress)
 			if diff != nil && len(diff) > 0 {
 				prevDesktop = img
-				sessions.IterCb(func(uuid string, t any) bool {
-					desktop := t.(*session)
-					desktop.lock.Lock()
-					if !desktop.escape {
-						if len(desktop.channel) >= frameBuffer {
-							select {
-							case <-desktop.channel:
-							default:
-							}
-						}
-						desktop.channel <- message{t: 0, frame: &diff}
-					}
-					desktop.lock.Unlock()
-					return true
-				})
+				sendImageDiff(diff)
 			}
 			<-time.After(time.Second / fpsLimit)
 		}
 	}
+	img = nil
 	prevDesktop = nil
-	if errors > 10 {
-		quitAll(err.Error())
+	if numErrors > 10 {
+		quitAllDesktop(err.Error())
 	}
 	lock.Lock()
 	working = false
 	lock.Unlock()
-	screen.release()
+	screen.Release()
 	runtime.UnlockOSThread()
+	go runtime.GC()
 }
 
-func quitAll(info string) {
+func sendImageDiff(diff []*[]byte) {
+	sessions.IterCb(func(uuid string, desktop *session) bool {
+		desktop.lock.Lock()
+		if !desktop.escape {
+			if len(desktop.channel) >= frameBuffer {
+				select {
+				case <-desktop.channel:
+				default:
+				}
+			}
+			desktop.channel <- message{t: 0, frame: &diff}
+		}
+		desktop.lock.Unlock()
+		return true
+	})
+}
+
+func quitAllDesktop(info string) {
 	keys := make([]string, 0)
-	sessions.IterCb(func(uuid string, t any) bool {
+	sessions.IterCb(func(uuid string, desktop *session) bool {
 		keys = append(keys, uuid)
-		desktop := t.(*session)
 		desktop.escape = true
 		desktop.channel <- message{t: 1, info: info}
 		return true
@@ -155,7 +157,7 @@ func quitAll(info string) {
 	lock.Unlock()
 }
 
-func imageCompare(img, prev *image.RGBA, compress bool) []*[]byte {
+func imageCompare(img, prev *image.RGBA, compress int) []*[]byte {
 	result := make([]*[]byte, 0)
 	if prev == nil {
 		return splitFullImage(img, compress)
@@ -166,24 +168,13 @@ func imageCompare(img, prev *image.RGBA, compress bool) []*[]byte {
 	}
 	for _, rect := range diff {
 		block := getImageBlock(img, rect, compress)
-		buf := make([]byte, 12)
-		if compress {
-			binary.BigEndian.PutUint16(buf[0:2], uint16(1))
-		} else {
-			binary.BigEndian.PutUint16(buf[0:2], uint16(0))
-		}
-		binary.BigEndian.PutUint16(buf[2:4], uint16(len(block)))
-		binary.BigEndian.PutUint16(buf[4:6], uint16(rect.Min.X))
-		binary.BigEndian.PutUint16(buf[6:8], uint16(rect.Min.Y))
-		binary.BigEndian.PutUint16(buf[8:10], uint16(rect.Size().X))
-		binary.BigEndian.PutUint16(buf[10:12], uint16(rect.Size().Y))
-		buf = append(buf, block...)
-		result = append(result, &buf)
+		block = makeImageBlock(block, rect, compress)
+		result = append(result, &block)
 	}
 	return result
 }
 
-func splitFullImage(img *image.RGBA, compress bool) []*[]byte {
+func splitFullImage(img *image.RGBA, compress int) []*[]byte {
 	if img == nil {
 		return nil
 	}
@@ -195,26 +186,16 @@ func splitFullImage(img *image.RGBA, compress bool) []*[]byte {
 		height := utils.If(y+blockSize > imgHeight, imgHeight-y, blockSize)
 		for x := rect.Min.X; x < rect.Max.X; x += blockSize {
 			width := utils.If(x+blockSize > imgWidth, imgWidth-x, blockSize)
-			block := getImageBlock(img, image.Rect(x, y, x+width, y+height), compress)
-			buf := make([]byte, 12)
-			if compress {
-				binary.BigEndian.PutUint16(buf[0:2], uint16(1))
-			} else {
-				binary.BigEndian.PutUint16(buf[0:2], uint16(0))
-			}
-			binary.BigEndian.PutUint16(buf[2:4], uint16(len(block)))
-			binary.BigEndian.PutUint16(buf[4:6], uint16(x))
-			binary.BigEndian.PutUint16(buf[6:8], uint16(y))
-			binary.BigEndian.PutUint16(buf[8:10], uint16(width))
-			binary.BigEndian.PutUint16(buf[10:12], uint16(height))
-			buf = append(buf, block...)
-			result = append(result, &buf)
+			blockRect := image.Rect(x, y, x+width, y+height)
+			block := getImageBlock(img, blockRect, compress)
+			block = makeImageBlock(block, blockRect, compress)
+			result = append(result, &block)
 		}
 	}
 	return result
 }
 
-func getImageBlock(img *image.RGBA, rect image.Rectangle, compress bool) []byte {
+func getImageBlock(img *image.RGBA, rect image.Rectangle, compress int) []byte {
 	width := rect.Dx()
 	height := rect.Dy()
 	buf := make([]byte, width*height*4)
@@ -225,17 +206,32 @@ func getImageBlock(img *image.RGBA, rect image.Rectangle, compress bool) []byte 
 		bufPos += width * 4
 		imgPos += img.Stride
 	}
-	if !compress {
+	switch compress {
+	case 0:
 		return buf
+	case 1:
+		subImg := &image.RGBA{
+			Pix:    buf,
+			Stride: width * 4,
+			Rect:   image.Rect(0, 0, width, height),
+		}
+		writer := &bytes.Buffer{}
+		jpeg.Encode(writer, subImg, &jpeg.Options{Quality: imageQuality})
+		return writer.Bytes()
 	}
-	subImg := &image.RGBA{
-		Pix:    buf,
-		Stride: width * 4,
-		Rect:   image.Rect(0, 0, width, height),
-	}
-	writer := &bytes.Buffer{}
-	jpeg.Encode(writer, subImg, &jpeg.Options{Quality: imageQuality})
-	return writer.Bytes()
+	return nil
+}
+
+func makeImageBlock(block []byte, rect image.Rectangle, compress int) []byte {
+	buf := make([]byte, 12)
+	binary.BigEndian.PutUint16(buf[0:2], uint16(len(block)+10))
+	binary.BigEndian.PutUint16(buf[2:4], uint16(compress))
+	binary.BigEndian.PutUint16(buf[4:6], uint16(rect.Min.X))
+	binary.BigEndian.PutUint16(buf[6:8], uint16(rect.Min.Y))
+	binary.BigEndian.PutUint16(buf[8:10], uint16(rect.Size().X))
+	binary.BigEndian.PutUint16(buf[10:12], uint16(rect.Size().Y))
+	buf = append(buf, block...)
+	return buf
 }
 
 func getDiff(img, prev *image.RGBA) []image.Rectangle {
@@ -310,7 +306,7 @@ func InitDesktop(pack modules.Packet) error {
 		rawEvent: rawEvent,
 		lastPack: utils.Unix,
 		escape:   false,
-		channel:  make(chan message, 3),
+		channel:  make(chan message, 5),
 		lock:     &sync.Mutex{},
 	}
 	{
@@ -318,7 +314,9 @@ func InitDesktop(pack modules.Packet) error {
 		if screenshot.NumActiveDisplays() == 0 {
 			if displayBounds.Dx() == 0 || displayBounds.Dy() == 0 {
 				close(desktop.channel)
-				common.WSConn.SendCallback(modules.Packet{Act: `DESKTOP_QUIT`, Msg: `${i18n|DESKTOP.NO_DISPLAY_FOUND}`}, pack)
+				data, _ := utils.JSON.Marshal(modules.Packet{Act: `DESKTOP_QUIT`, Msg: `${i18n|DESKTOP.NO_DISPLAY_FOUND}`})
+				data = utils.XOR(data, common.WSConn.GetSecret())
+				common.WSConn.SendRawData(desktop.rawEvent, data, 20, 03)
 				return errors.New(`${i18n|DESKTOP.NO_DISPLAY_FOUND}`)
 			}
 		}
@@ -346,33 +344,32 @@ func PingDesktop(pack modules.Packet) {
 	} else {
 		uuid = val.(string)
 	}
-	if val, ok := sessions.Get(uuid); !ok {
+	desktop, ok := sessions.Get(uuid)
+	if !ok {
 		return
-	} else {
-		desktop = val.(*session)
-		desktop.lastPack = utils.Unix
 	}
+	desktop.lastPack = utils.Unix
 }
 
 func KillDesktop(pack modules.Packet) {
 	var uuid string
-	var desktop *session
 	if val, ok := pack.GetData(`desktop`, reflect.String); !ok {
 		return
 	} else {
 		uuid = val.(string)
 	}
-	if val, ok := sessions.Get(uuid); !ok {
+	desktop, ok := sessions.Get(uuid)
+	if !ok {
 		return
-	} else {
-		desktop = val.(*session)
 	}
 	sessions.Remove(uuid)
+	data, _ := utils.JSON.Marshal(modules.Packet{Act: `DESKTOP_QUIT`, Msg: `${i18n|DESKTOP.SESSION_CLOSED}`})
+	data = utils.XOR(data, common.WSConn.GetSecret())
+	common.WSConn.SendRawData(desktop.rawEvent, data, 20, 03)
 	desktop.lock.Lock()
 	desktop.escape = true
 	desktop.rawEvent = nil
 	desktop.lock.Unlock()
-	common.WSConn.SendCallback(modules.Packet{Act: `DESKTOP_QUIT`, Msg: `${i18n|DESKTOP.SESSION_CLOSED}`}, pack)
 }
 
 func GetDesktop(pack modules.Packet) {
@@ -383,10 +380,9 @@ func GetDesktop(pack modules.Packet) {
 	} else {
 		uuid = val.(string)
 	}
-	if val, ok := sessions.Get(uuid); !ok {
+	desktop, ok := sessions.Get(uuid)
+	if !ok {
 		return
-	} else {
-		desktop = val.(*session)
 	}
 	if !desktop.escape {
 		lock.Lock()
@@ -404,7 +400,9 @@ func handleDesktop(pack modules.Packet, uuid string, desktop *session) {
 		case msg, ok := <-desktop.channel:
 			// send error info
 			if msg.t == 1 || !ok {
-				common.WSConn.SendCallback(modules.Packet{Act: `DESKTOP_QUIT`, Msg: msg.info}, pack)
+				data, _ := utils.JSON.Marshal(modules.Packet{Act: `DESKTOP_QUIT`, Msg: msg.info})
+				data = utils.XOR(data, common.WSConn.GetSecret())
+				common.WSConn.SendRawData(desktop.rawEvent, data, 20, 03)
 				desktop.escape = true
 				sessions.Remove(uuid)
 				break
@@ -428,16 +426,16 @@ func handleDesktop(pack modules.Packet, uuid string, desktop *session) {
 			// set resolution
 			if msg.t == 2 {
 				buf := append([]byte{34, 22, 19, 17, 20, 02}, desktop.rawEvent...)
-				data := make([]byte, 4)
-				binary.BigEndian.PutUint16(data[:2], uint16(displayBounds.Dx()))
-				binary.BigEndian.PutUint16(data[2:], uint16(displayBounds.Dy()))
+				data := make([]byte, 6)
+				binary.BigEndian.PutUint16(data[:2], 4)
+				binary.BigEndian.PutUint16(data[2:4], uint16(displayBounds.Dx()))
+				binary.BigEndian.PutUint16(data[4:6], uint16(displayBounds.Dy()))
 				buf = append(buf, data...)
 				common.WSConn.SendData(buf)
-				break
+				continue
 			}
-		case <-time.After(time.Second * 5):
-		default:
-			time.Sleep(50 * time.Millisecond)
+		case <-time.After(7 * time.Second):
+			continue
 		}
 	}
 }
@@ -448,8 +446,7 @@ func healthCheck() {
 		timestamp := now.Unix()
 		// stores sessions to be disconnected
 		keys := make([]string, 0)
-		sessions.IterCb(func(uuid string, t any) bool {
-			desktop := t.(*session)
+		sessions.IterCb(func(uuid string, desktop *session) bool {
 			if timestamp-desktop.lastPack > MaxInterval {
 				keys = append(keys, uuid)
 			}

@@ -1,4 +1,4 @@
-{
+export default {
 	"COMMON.REQUEST_FAILED": "Request failed",
 	"COMMON.REQUEST_TIMEOUT": "Request timeout",
 	"COMMON.PAGE_NOT_FOUND": "Page Not Found",
@@ -10,6 +10,9 @@
 	"COMMON.RECONNECTING": "Reconnecting...",
 	"COMMON.DISCONNECTED": "Session disconnected",
 	"COMMON.CONNECTION_FAILED": "Connection failed",
+
+	"COMMON.UPDATE_DETAILS": "View Details",
+	"COMMON.UPDATE_DISMISS": "Dismiss",
 
 	"COMMON.HOURS": "h",
 	"COMMON.MINUTES": "m",
@@ -38,7 +41,7 @@
 	"OVERVIEW.TERMINAL": "Terminal",
 	"OVERVIEW.PROC_MANAGER": "Process",
 	"OVERVIEW.EXPLORER": "Explorer",
-	"OVERVIEW.RUN": "Run",
+	"OVERVIEW.EXECUTE": "Execute",
 	"OVERVIEW.SCREENSHOT": "Screenshot",
 	"OVERVIEW.DESKTOP": "Desktop",
 	"OVERVIEW.LOCK": "Lock",
@@ -55,10 +58,10 @@
 	"EXPLORER.TITLE": "File Explorer",
 	"EXPLORER.FILE_NAME": "Name",
 	"EXPLORER.FILE_SIZE": "Size",
-	"EXPLORER.MODIFY_TIME": "Modify Time",
+	"EXPLORER.DATE_MODIFIED": "Date Modified",
 	"EXPLORER.FILE": "file",
 	"EXPLORER.FOLDER": "folder",
-	"EXPLORER.RELOAD": "Reload",
+	"EXPLORER.RENAME": "Rename",
 	"EXPLORER.UPLOAD": "Upload",
 	"EXPLORER.DELETE": "Delete",
 	"EXPLORER.DOWNLOAD": "Download",
@@ -116,6 +119,16 @@
 	"TERMINAL.SESSION_CLOSED": "Terminal session closed",
 	"TERMINAL.SPECIAL_KEYS": "Special Keys",
 	"TERMINAL.FUNCTION_KEYS": "Function Keys",
+	"TERMINAL.ZMODEM_FILE_TOO_LARGE": "File exceeds the size limit (16MB)",
+	"TERMINAL.ZMODEM_TRANSFER_START": "File transfer started, please wait...",
+	"TERMINAL.ZMODEM_TRANSFER_FAILED": "File transfer failed",
+	"TERMINAL.ZMODEM_TRANSFER_SUCCESS": "File is transferred successfully",
+	"TERMINAL.ZMODEM_TRANSFER_REJECTED": "Transfer request has been rejected",
+	"TERMINAL.ZMODEM_UPLOADER_NO_FILE": "No file selected",
+	"TERMINAL.ZMODEM_UPLOADER_CALL_FAILED": "Failed to pull up file uploader",
+	"TERMINAL.ZMODEM_UPLOADER_CALL_TIMEOUT": "File selection timeout, please try again",
+	"TERMINAL.ZMODEM_UPLOADER_TIP": "File selector will open, if not, please click 'Select File' button",
+	"TERMINAL.ZMODEM_UPLOADER_WARNING": "If no file selected, please wait for 10 seconds to make session timeout",
 
 	"DESKTOP.TITLE": "Desktop",
 	"DESKTOP.CREATE_SESSION_FAILED": "Failed to create desktop session",
@@ -125,8 +138,8 @@
 	"DESKTOP.FETCH_IMAGE_FAILED": "Failed to fetch screenshot image",
 	"DESKTOP.NO_DISPLAY_FOUND": "No display found",
 
-	"RUNNER.TITLE": "Run",
-	"RUNNER.EXECUTION_SUCCESS": "Execution success",
-	"RUNNER.CMD_PLACEHOLDER": "Command",
-	"RUNNER.ARGS_PLACEHOLDER": "Arguments (separated by space)"
-}
+	"EXECUTE.TITLE": "Run",
+	"EXECUTE.EXECUTION_SUCCESS": "Execution success",
+	"EXECUTE.CMD_PLACEHOLDER": "Command",
+	"EXECUTE.ARGS_PLACEHOLDER": "Arguments (separated by space)"
+};

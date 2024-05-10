@@ -9,8 +9,6 @@ import (
 	"Spark/utils/melody"
 	"bytes"
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -73,8 +71,7 @@ func OnDevicePack(data []byte, session *melody.Session) error {
 		// If so, then find the session and let client quit.
 		// This will keep only one connection remained per device.
 		exSession := ``
-		common.Devices.IterCb(func(uuid string, v any) bool {
-			device := v.(*modules.Device)
+		common.Devices.IterCb(func(uuid string, device *modules.Device) bool {
 			if device.ID == pack.Device.ID {
 				exSession = uuid
 				target, ok := common.Melody.GetSessionByUUID(uuid)
@@ -106,14 +103,13 @@ func OnDevicePack(data []byte, session *melody.Session) error {
 			Remark:   pack.Device.Remark,
 		})
 	} else {
-		val, ok := common.Devices.Get(session.UUID)
+		device, ok := common.Devices.Get(session.UUID)
 		if ok {
-			deviceInfo := val.(*modules.Device)
-			deviceInfo.CPU = pack.Device.CPU
-			deviceInfo.RAM = pack.Device.RAM
-			deviceInfo.Net = pack.Device.Net
-			deviceInfo.Disk = pack.Device.Disk
-			deviceInfo.Uptime = pack.Device.Uptime
+			device.CPU = pack.Device.CPU
+			device.RAM = pack.Device.RAM
+			device.Net = pack.Device.Net
+			device.Disk = pack.Device.Disk
+			device.Uptime = pack.Device.Uptime
 		}
 	}
 	common.SendPack(modules.Packet{Code: 0}, session)
@@ -280,8 +276,7 @@ func ExecDeviceCmd(ctx *gin.Context) {
 // GetDevices will return all info about all clients.
 func GetDevices(ctx *gin.Context) {
 	devices := map[string]any{}
-	common.Devices.IterCb(func(uuid string, v any) bool {
-		device := v.(*modules.Device)
+	common.Devices.IterCb(func(uuid string, device *modules.Device) bool {
 		devices[uuid] = *device
 		return true
 	})
@@ -341,36 +336,22 @@ func CallDevice(ctx *gin.Context) {
 	}
 }
 
-func SimpleEncrypt(data []byte, session *melody.Session) ([]byte, bool) {
+func SimpleEncrypt(data []byte, session *melody.Session) []byte {
 	temp, ok := session.Get(`Secret`)
 	if !ok {
-		return nil, false
+		return nil
 	}
 	secret := temp.([]byte)
-	block, err := aes.NewCipher(secret)
-	if err != nil {
-		return nil, false
-	}
-	stream := cipher.NewCTR(block, secret)
-	encBuffer := make([]byte, len(data))
-	stream.XORKeyStream(encBuffer, data)
-	return encBuffer, true
+	return utils.XOR(data, secret)
 }
 
-func SimpleDecrypt(data []byte, session *melody.Session) ([]byte, bool) {
+func SimpleDecrypt(data []byte, session *melody.Session) []byte {
 	temp, ok := session.Get(`Secret`)
 	if !ok {
-		return nil, false
+		return nil
 	}
 	secret := temp.([]byte)
-	block, err := aes.NewCipher(secret)
-	if err != nil {
-		return nil, false
-	}
-	stream := cipher.NewCTR(block, secret)
-	decBuffer := make([]byte, len(data))
-	stream.XORKeyStream(decBuffer, data)
-	return decBuffer, true
+	return utils.XOR(data, secret)
 }
 
 func WSHealthCheck(container *melody.Melody, sender Sender) {

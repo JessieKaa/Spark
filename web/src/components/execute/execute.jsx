@@ -1,16 +1,16 @@
 import React from 'react';
 import {ModalForm, ProFormText} from '@ant-design/pro-form';
-import {request} from "../utils/utils";
-import i18n from "../locale/locale";
+import {request} from "../../utils/utils";
+import i18n from "../../locale/locale";
 import {message} from "antd";
 
-function Runner(props) {
+function Execute(props) {
 	async function onFinish(form) {
 		form.device = props.device.id;
 		let basePath = location.origin + location.pathname + 'api/device/';
 		request(basePath + 'exec', form).then(res => {
 			if (res.data.code === 0) {
-				message.success(i18n.t('RUNNER.EXECUTION_SUCCESS'));
+				message.success(i18n.t('EXECUTE.EXECUTION_SUCCESS'));
 			}
 		});
 	}
@@ -21,11 +21,11 @@ function Runner(props) {
 				destroyOnClose: true,
 				maskClosable: false,
 			}}
-			title={i18n.t('RUNNER.TITLE')}
+			title={i18n.t('EXECUTE.TITLE')}
 			width={380}
 			onFinish={onFinish}
-			onVisibleChange={visible => {
-				if (!visible) props.onCancel();
+			onVisibleChange={open => {
+				if (!open) props.onCancel();
 			}}
 			submitter={{
 				render: (_, elems) => elems.pop()
@@ -35,7 +35,7 @@ function Runner(props) {
 			<ProFormText
 				width="md"
 				name="cmd"
-				label={i18n.t('RUNNER.CMD_PLACEHOLDER')}
+				label={i18n.t('EXECUTE.CMD_PLACEHOLDER')}
 				rules={[{
 					required: true
 				}]}
@@ -43,10 +43,10 @@ function Runner(props) {
 			<ProFormText
 				width="md"
 				name="args"
-				label={i18n.t('RUNNER.ARGS_PLACEHOLDER')}
+				label={i18n.t('EXECUTE.ARGS_PLACEHOLDER')}
 			/>
 		</ModalForm>
 	)
 }
 
-export default Runner;
+export default Execute;
