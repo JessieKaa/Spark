@@ -6,18 +6,19 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"github.com/denisbrodbeck/machineid"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/host"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/net"
 	_net "net"
 	"os"
 	"os/user"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/denisbrodbeck/machineid"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
 )
 
 func isPrivateIP(ip _net.IP) bool {
@@ -168,7 +169,11 @@ func GetDiskInfo() (modules.IO, error) {
 	return result, nil
 }
 
-func GetDevice() (*modules.Device, error) {
+func getDeviceID() string {
+	envId := os.Getenv("SPARK_DEVICE_ID")
+	if len(envId) == 64 {
+		return envId
+	}
 	id, err := machineid.ProtectedID(`Spark`)
 	if err != nil {
 		id, err = machineid.ID()
@@ -178,6 +183,11 @@ func GetDevice() (*modules.Device, error) {
 			id = hex.EncodeToString(secBuffer)
 		}
 	}
+	return id
+}
+
+func GetDevice() (*modules.Device, error) {
+	id := getDeviceID()
 	localIP, err := GetLocalIP()
 	if err != nil {
 		localIP = `<UNKNOWN>`

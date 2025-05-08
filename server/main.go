@@ -14,7 +14,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/rakyll/statik/fs"
 	"io"
 	"net"
 	"os"
@@ -23,6 +22,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/rakyll/statik/fs"
 
 	_ "Spark/server/embed/web"
 	"Spark/utils"
@@ -222,7 +223,7 @@ func wsOnDisconnect(session *melody.Session) {
 			},
 		})
 		// save devices if offline
-		deviceInfo.OfflineTime = time.Now().Unix()
+		device.OfflineTime = time.Now().Unix()
 	} else {
 		common.Info(nil, `CLIENT_OFFLINE`, ``, ``, map[string]any{
 			`device`: map[string]any{
