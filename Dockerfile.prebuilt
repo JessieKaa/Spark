@@ -1,0 +1,38 @@
+# ============================================
+# 预编译版本 Dockerfile
+# 使用已编译好的二进制文件，构建更快
+# ============================================
+FROM alpine:latest
+
+# 安装必要的运行时依赖
+RUN apk add --no-cache ca-certificates tzdata
+
+# 设置时区
+ENV TZ=Asia/Shanghai
+
+WORKDIR /app
+
+# 复制预编译的服务端和客户端
+COPY releases/spark-server ./spark-server
+COPY built/ ./built/
+
+# 设置执行权限
+RUN chmod +x ./spark-server
+
+# 创建数据目录
+RUN mkdir -p /app/data /app/logs
+
+# 暴露端口
+EXPOSE 8000
+
+# 设置数据卷
+VOLUME ["/app/data", "/app/logs", "/app/built"]
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8000/ || exit 1
+
+# 启动命令
+ENTRYPOINT ["./spark-server"]
+CMD ["-config", "/app/data/config.json", "-database", "/app/data/spark.db", "-log-path", "/app/logs"]
+

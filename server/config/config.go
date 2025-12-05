@@ -4,8 +4,9 @@ import (
 	"Spark/utils"
 	"bytes"
 	"flag"
-	"github.com/kataras/golog"
 	"os"
+
+	"github.com/kataras/golog"
 )
 
 type config struct {
@@ -16,6 +17,8 @@ type config struct {
 	SaltBytes []byte            `json:"-"`
 	// TODO: change
 	DeviceInfoFile string `json:"device_info_file"`
+	// 数据库配置
+	DatabasePath string `json:"database_path"`
 }
 type log struct {
 	Level string `json:"level"`
@@ -40,6 +43,7 @@ func init() {
 		logDays                  uint
 		deviceInfoFile           string
 		builtPath                string
+		databasePath             string
 	)
 	flag.StringVar(&configPath, `config`, `config.json`, `config file path, default: config.json`)
 	flag.StringVar(&listen, `listen`, `:8000`, `required, listen address, default: :8000`)
@@ -51,6 +55,7 @@ func init() {
 	flag.UintVar(&logDays, `log-days`, 7, `max days of logs, default: 7`)
 	flag.StringVar(&deviceInfoFile, `device_info_file`, "device_info.json", `file to store device info`)
 	flag.StringVar(&builtPath, `built_path`, "./built/%v_%v", `path to store built file`)
+	flag.StringVar(&databasePath, `database`, `./spark.db`, `SQLite database path, default: ./spark.db`)
 	flag.Parse()
 
 	if len(configPath) > 0 {
@@ -111,6 +116,14 @@ func init() {
 
 	Config.DeviceInfoFile = deviceInfoFile
 	BuiltPath = builtPath
+
+	// 设置数据库路径，优先使用命令行参数
+	if len(databasePath) > 0 {
+		Config.DatabasePath = databasePath
+	}
+	if len(Config.DatabasePath) == 0 {
+		Config.DatabasePath = `./spark.db`
+	}
 
 	golog.SetLevel(utils.If(len(Config.Log.Level) == 0, `info`, Config.Log.Level))
 }

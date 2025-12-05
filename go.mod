@@ -13,6 +13,7 @@ require (
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/kirides/go-d3d v1.0.0
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/rakyll/statik v0.1.7
 	github.com/shirou/gopsutil/v3 v3.22.2
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9

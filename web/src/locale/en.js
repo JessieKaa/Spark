@@ -52,6 +52,7 @@ export default {
 	"OVERVIEW.SHUTDOWN": "Shutdown",
 	"OVERVIEW.OFFLINE": "Offline",
 	"OVERVIEW.GENERATE": "Generate Client",
+	"OVERVIEW.SEARCH_PLACEHOLDER": "Search ID or Remark",
 	"OVERVIEW.OPERATION_CONFIRM": "Are you sure to {0} this device?",
 	"OVERVIEW.OPERATION_SUCCESS": "Operation executed",
 

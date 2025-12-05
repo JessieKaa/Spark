@@ -1,8 +1,8 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState, useMemo} from 'react';
 import ProTable, {TableDropdown} from '@ant-design/pro-table';
-import {Button, Image, message, Modal, Progress, Tooltip} from 'antd';
+import {Button, Image, Input, message, Modal, Progress, Space, Tooltip} from 'antd';
 import {catchBlobReq, formatSize, request, tsToTime, waitTime} from "../utils/utils";
-import {QuestionCircleOutlined} from "@ant-design/icons";
+import {QuestionCircleOutlined, SearchOutlined} from "@ant-design/icons";
 import i18n from "../locale/locale";
 
 // DO NOT EDIT OR DELETE THIS COPYRIGHT MESSAGE.
@@ -28,14 +28,40 @@ function overview(props) {
 	const [screenBlob, setScreenBlob] = useState('');
 	const [dataSource, setDataSource] = useState([]);
 	const [columnsState, setColumnsState] = useState(getInitColumnsState());
+	const [sortInfo, setSortInfo] = useState(getInitSortInfo());
+	const [searchText, setSearchText] = useState('');
+
+	// 根据搜索关键词过滤数据
+	const filteredData = useMemo(() => {
+		if (!searchText.trim()) {
+			return dataSource;
+		}
+		const keyword = searchText.trim().toLowerCase();
+		return dataSource.filter(item => {
+			const id = (item.id || '').toLowerCase();
+			const remark = (item.remark || '').toLowerCase();
+			return id.includes(keyword) || remark.includes(keyword);
+		});
+	}, [dataSource, searchText]);
 
 	const columns = [
+		{
+			key: 'id',
+			title: 'ID',
+			dataIndex: 'id',
+			ellipsis: true,
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'id' ? sortInfo.order : null,
+		},
 		{
 			key: 'remark',
 			title: i18n.t('OVERVIEW.REMARK'),
 			dataIndex: 'remark',
 			ellipsis: true,
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'remark' ? sortInfo.order : null,
 		},
 		{
 			key: 'offline_time',
@@ -43,21 +69,27 @@ function overview(props) {
 			dataIndex: 'offline_time',
 			ellipsis: true,
 			renderText: (_, v) => renderOfflineStat(v.offline_time),
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'offline_time' ? sortInfo.order : null,
 		},
 		{
 			key: 'hostname',
 			title: i18n.t('OVERVIEW.HOSTNAME'),
 			dataIndex: 'hostname',
 			ellipsis: true,
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'hostname' ? sortInfo.order : null,
 		},
 		{
 			key: 'username',
 			title: i18n.t('OVERVIEW.USERNAME'),
 			dataIndex: 'username',
 			ellipsis: true,
-			width: 90
+			width: 90,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'username' ? sortInfo.order : null,
 		},
 		{
 			key: 'ping',
@@ -65,7 +97,9 @@ function overview(props) {
 			dataIndex: 'latency',
 			ellipsis: true,
 			renderText: (v) => String(v) + 'ms',
-			width: 60
+			width: 60,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'ping' ? sortInfo.order : null,
 		},
 		{
 			key: 'cpu_usage',
@@ -73,7 +107,9 @@ function overview(props) {
 			dataIndex: 'cpu_usage',
 			ellipsis: true,
 			render: (_, v) => <UsageBar title={renderCPUStat(v.cpu)} {...v.cpu} />,
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'cpu_usage' ? sortInfo.order : null,
 		},
 		{
 			key: 'ram_usage',
@@ -81,7 +117,9 @@ function overview(props) {
 			dataIndex: 'ram_usage',
 			ellipsis: true,
 			render: (_, v) => <UsageBar title={renderRAMStat(v.ram)} {...v.ram} />,
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'ram_usage' ? sortInfo.order : null,
 		},
 		{
 			key: 'disk_usage',
@@ -89,21 +127,27 @@ function overview(props) {
 			dataIndex: 'disk_usage',
 			ellipsis: true,
 			render: (_, v) => <UsageBar title={renderDiskStat(v.disk)} {...v.disk} />,
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'disk_usage' ? sortInfo.order : null,
 		},
 		{
 			key: 'os',
 			title: i18n.t('OVERVIEW.OS'),
 			dataIndex: 'os',
 			ellipsis: true,
-			width: 80
+			width: 80,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'os' ? sortInfo.order : null,
 		},
 		{
 			key: 'arch',
 			title: i18n.t('OVERVIEW.ARCH'),
 			dataIndex: 'arch',
 			ellipsis: true,
-			width: 70
+			width: 70,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'arch' ? sortInfo.order : null,
 		},
 		{
 			key: 'ram_total',
@@ -111,28 +155,36 @@ function overview(props) {
 			dataIndex: 'ram_total',
 			ellipsis: true,
 			renderText: formatSize,
-			width: 70
+			width: 70,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'ram_total' ? sortInfo.order : null,
 		},
 		{
 			key: 'mac',
 			title: 'MAC',
 			dataIndex: 'mac',
 			ellipsis: true,
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'mac' ? sortInfo.order : null,
 		},
 		{
 			key: 'lan',
 			title: 'LAN',
 			dataIndex: 'lan',
 			ellipsis: true,
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'lan' ? sortInfo.order : null,
 		},
 		{
 			key: 'wan',
 			title: 'WAN',
 			dataIndex: 'wan',
 			ellipsis: true,
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'wan' ? sortInfo.order : null,
 		},
 		{
 			key: 'uptime',
@@ -140,7 +192,9 @@ function overview(props) {
 			dataIndex: 'uptime',
 			ellipsis: true,
 			renderText: tsToTime,
-			width: 100
+			width: 100,
+			sorter: true,
+			sortOrder: sortInfo.columnKey === 'uptime' ? sortInfo.order : null,
 		},
 		{
 			key: 'net_stat',
@@ -194,6 +248,14 @@ function overview(props) {
 		}
 	}, [execute, desktop, procMgr, explorer, generate, terminal]);
 
+	// 当排序配置改变时，重新排序数据
+	useEffect(() => {
+		if (dataSource.length > 0) {
+			const sortedData = sortData(dataSource, sortInfo);
+			setDataSource(sortedData);
+		}
+	}, [sortInfo]);
+
 	function getInitColumnsState() {
 		let data = localStorage.getItem(`columnsState`);
 		if (data !== null) {
@@ -212,6 +274,130 @@ function overview(props) {
 	function saveColumnsState(stateMap) {
 		setColumnsState(stateMap);
 		localStorage.setItem(`columnsState`, JSON.stringify(stateMap));
+	}
+
+	function getInitSortInfo() {
+		let data = localStorage.getItem(`sortInfo`);
+		if (data !== null) {
+			try {
+				return JSON.parse(data);
+			} catch (e) {
+				return { columnKey: null, order: null };
+			}
+		}
+		// 默认按离线状态排序（在线的排在前面）
+		return { columnKey: 'offline_time', order: 'ascend' };
+	}
+	function saveSortInfo(newSortInfo) {
+		setSortInfo(newSortInfo);
+		localStorage.setItem(`sortInfo`, JSON.stringify(newSortInfo));
+	}
+
+	// 排序处理函数
+	function handleTableChange(pagination, filters, sorter) {
+		const newSortInfo = {
+			columnKey: sorter.columnKey || null,
+			order: sorter.order || null,
+		};
+		saveSortInfo(newSortInfo);
+	}
+
+	// 对数据进行排序
+	function sortData(data, sortConfig) {
+		if (!sortConfig.columnKey || !sortConfig.order) {
+			return data;
+		}
+
+		const { columnKey, order } = sortConfig;
+		const sortedData = [...data];
+
+		sortedData.sort((a, b) => {
+			let aValue, bValue;
+
+			// 根据不同的列获取对应的值
+			switch (columnKey) {
+				case 'id':
+					aValue = a.id || '';
+					bValue = b.id || '';
+					break;
+				case 'remark':
+					aValue = a.remark || '';
+					bValue = b.remark || '';
+					break;
+				case 'offline_time':
+					// 在线设备的 offline_time 为 0，排序时在线的排在前面
+					aValue = a.offline_time || 0;
+					bValue = b.offline_time || 0;
+					break;
+				case 'hostname':
+					aValue = (a.hostname || '').toUpperCase();
+					bValue = (b.hostname || '').toUpperCase();
+					break;
+				case 'username':
+					aValue = (a.username || '').toUpperCase();
+					bValue = (b.username || '').toUpperCase();
+					break;
+				case 'ping':
+					aValue = a.latency || 0;
+					bValue = b.latency || 0;
+					break;
+				case 'cpu_usage':
+					aValue = a.cpu_usage || 0;
+					bValue = b.cpu_usage || 0;
+					break;
+				case 'ram_usage':
+					aValue = a.ram_usage || 0;
+					bValue = b.ram_usage || 0;
+					break;
+				case 'disk_usage':
+					aValue = a.disk_usage || 0;
+					bValue = b.disk_usage || 0;
+					break;
+				case 'os':
+					aValue = (a.os || '').toUpperCase();
+					bValue = (b.os || '').toUpperCase();
+					break;
+				case 'arch':
+					aValue = (a.arch || '').toUpperCase();
+					bValue = (b.arch || '').toUpperCase();
+					break;
+				case 'ram_total':
+					aValue = a.ram_total || 0;
+					bValue = b.ram_total || 0;
+					break;
+				case 'mac':
+					aValue = (a.mac || '').toUpperCase();
+					bValue = (b.mac || '').toUpperCase();
+					break;
+				case 'lan':
+					aValue = a.lan || '';
+					bValue = b.lan || '';
+					break;
+				case 'wan':
+					aValue = a.wan || '';
+					bValue = b.wan || '';
+					break;
+				case 'uptime':
+					aValue = a.uptime || 0;
+					bValue = b.uptime || 0;
+					break;
+				default:
+					return 0;
+			}
+
+			// 比较值
+			let comparison = 0;
+			if (typeof aValue === 'string') {
+				comparison = aValue.localeCompare(bValue);
+			} else {
+				comparison = aValue - bValue;
+			}
+
+			// 根据排序方向返回结果
+			return order === 'ascend' ? comparison : -comparison;
+		});
+
+		return sortedData;
 	}
 
 	function renderCPUStat(cpu) {
@@ -363,7 +549,17 @@ function overview(props) {
 
 	function toolBar() {
 		return (
-			<Button type='primary' onClick={() => onMenuClick('generate', true)}>{i18n.t('OVERVIEW.GENERATE')}</Button>
+			<Space>
+				<Input.Search
+					placeholder={i18n.t('OVERVIEW.SEARCH_PLACEHOLDER')}
+					allowClear
+					style={{ width: 250 }}
+					value={searchText}
+					onChange={(e) => setSearchText(e.target.value)}
+					onSearch={(value) => setSearchText(value)}
+				/>
+				<Button type='primary' onClick={() => onMenuClick('generate', true)}>{i18n.t('OVERVIEW.GENERATE')}</Button>
+			</Space>
 		)
 	}
 
@@ -388,20 +584,8 @@ function overview(props) {
 					}
 				}
 			}
-			result = result.sort((first, second) => {
-				let firstEl = first.hostname.toUpperCase();
-				let secondEl = second.hostname.toUpperCase();
-				if (firstEl < secondEl) return -1;
-				if (firstEl > secondEl) return 1;
-				return 0;
-			});
-			result = result.sort((first, second) => {
-				let firstEl = first.os.toUpperCase();
-				let secondEl = second.os.toUpperCase();
-				if (firstEl < secondEl) return -1;
-				if (firstEl > secondEl) return 1;
-				return 0;
-			});
+			// 应用当前的排序配置
+			result = sortData(result, sortInfo);
 			setDataSource(result);
 			return ({
 				data: result,
@@ -490,8 +674,9 @@ function overview(props) {
 				pagination={false}
 				actionRef={tableRef}
 				toolBarRender={toolBar}
-				dataSource={dataSource}
+				dataSource={filteredData}
 				onDataSourceChange={setDataSource}
+				onChange={handleTableChange}
 			/>
 		</>
 	);

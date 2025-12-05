@@ -52,6 +52,7 @@ export default {
 	"OVERVIEW.SHUTDOWN": "关机",
 	"OVERVIEW.OFFLINE": "离线",
 	"OVERVIEW.GENERATE": "生成客户端",
+	"OVERVIEW.SEARCH_PLACEHOLDER": "搜索 ID 或备注",
 	"OVERVIEW.OPERATION_CONFIRM": "确定要{0}该设备吗？",
 	"OVERVIEW.OPERATION_SUCCESS": "操作已执行",
 

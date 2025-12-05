@@ -5,6 +5,7 @@ import (
 	"Spark/server/auth"
 	"Spark/server/common"
 	"Spark/server/config"
+	"Spark/server/database"
 	"Spark/server/handler"
 	"Spark/server/handler/desktop"
 	"Spark/server/handler/terminal"
@@ -37,6 +38,13 @@ var blocked = cmap.New[int64]()
 var lastRequest = time.Now().Unix()
 
 func main() {
+	// 初始化数据库
+	if err := database.Init(config.Config.DatabasePath); err != nil {
+		common.Fatal(nil, `DB_INIT`, `fail`, err.Error(), nil)
+		return
+	}
+	defer database.Close()
+
 	webFS, err := fs.NewWithNamespace(`web`)
 	if err != nil {
 		common.Fatal(nil, `LOAD_STATIC_RES`, `fail`, err.Error(), nil)
@@ -222,8 +230,12 @@ func wsOnDisconnect(session *melody.Session) {
 				`ip`:   device.WAN,
 			},
 		})
-		// save devices if offline
-		device.OfflineTime = time.Now().Unix()
+		// 保存离线时间
+		offlineTime := time.Now().Unix()
+		device.OfflineTime = offlineTime
+
+		// 保存设备离线状态到数据库
+		go database.SaveDevice(device)
 	} else {
 		common.Info(nil, `CLIENT_OFFLINE`, ``, ``, map[string]any{
 			`device`: map[string]any{
@@ -231,8 +243,8 @@ func wsOnDisconnect(session *melody.Session) {
 			},
 		})
 	}
-	// save devices if offline
-	//common.Devices.Remove(session.UUID)
+	// 从内存中移除设备（设备信息已保存到数据库）
+	common.Devices.Remove(session.UUID)
 }
 
 func wsHealthCheck(container *melody.Melody) {
