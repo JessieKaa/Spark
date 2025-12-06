@@ -15,7 +15,7 @@ var (
 	once sync.Once
 )
 
-// DeviceRecord 数据库中存储的设备记录
+// DeviceRecord 数据库中存储的设备记录（包含完整状态）
 type DeviceRecord struct {
 	ID          string `json:"id"`
 	Remark      string `json:"remark"`
@@ -27,8 +27,33 @@ type DeviceRecord struct {
 	Hostname    string `json:"hostname"`
 	Username    string `json:"username"`
 	OfflineTime int64  `json:"offline_time"`
-	CreatedAt   int64  `json:"created_at"`
-	UpdatedAt   int64  `json:"updated_at"`
+
+	// CPU 信息
+	CPUModel         string  `json:"cpu_model"`
+	CPUUsage         float64 `json:"cpu_usage"`
+	CPUCoresLogical  int     `json:"cpu_cores_logical"`
+	CPUCoresPhysical int     `json:"cpu_cores_physical"`
+
+	// RAM 信息
+	RAMTotal uint64  `json:"ram_total"`
+	RAMUsed  uint64  `json:"ram_used"`
+	RAMUsage float64 `json:"ram_usage"`
+
+	// 磁盘信息
+	DiskTotal uint64  `json:"disk_total"`
+	DiskUsed  uint64  `json:"disk_used"`
+	DiskUsage float64 `json:"disk_usage"`
+
+	// 网络信息
+	NetSent uint64 `json:"net_sent"`
+	NetRecv uint64 `json:"net_recv"`
+
+	// 其他信息
+	Uptime  uint64 `json:"uptime"`
+	Latency uint   `json:"latency"`
+
+	CreatedAt int64 `json:"created_at"`
+	UpdatedAt int64 `json:"updated_at"`
 }
 
 // Init 初始化数据库连接
@@ -47,6 +72,12 @@ func Init(dbPath string) error {
 
 		// 创建设备表
 		err = createTables()
+		if err != nil {
+			return
+		}
+
+		// 执行数据库迁移
+		err = migrateDatabase()
 	})
 	return err
 }
@@ -65,6 +96,31 @@ func createTables() error {
 		hostname TEXT DEFAULT '',
 		username TEXT DEFAULT '',
 		offline_time INTEGER DEFAULT 0,
+		
+		-- CPU 信息
+		cpu_model TEXT DEFAULT '',
+		cpu_usage REAL DEFAULT 0,
+		cpu_cores_logical INTEGER DEFAULT 0,
+		cpu_cores_physical INTEGER DEFAULT 0,
+		
+		-- RAM 信息
+		ram_total INTEGER DEFAULT 0,
+		ram_used INTEGER DEFAULT 0,
+		ram_usage REAL DEFAULT 0,
+		
+		-- 磁盘信息
+		disk_total INTEGER DEFAULT 0,
+		disk_used INTEGER DEFAULT 0,
+		disk_usage REAL DEFAULT 0,
+		
+		-- 网络信息
+		net_sent INTEGER DEFAULT 0,
+		net_recv INTEGER DEFAULT 0,
+		
+		-- 其他信息
+		uptime INTEGER DEFAULT 0,
+		latency INTEGER DEFAULT 0,
+		
 		created_at INTEGER DEFAULT 0,
 		updated_at INTEGER DEFAULT 0
 	);
@@ -83,6 +139,38 @@ func createTables() error {
 	return nil
 }
 
+// migrateDatabase 数据库迁移，添加可能缺少的列
+func migrateDatabase() error {
+	// 需要添加的新列
+	newColumns := []struct {
+		name         string
+		defaultValue string
+	}{
+		{"cpu_model", "TEXT DEFAULT ''"},
+		{"cpu_usage", "REAL DEFAULT 0"},
+		{"cpu_cores_logical", "INTEGER DEFAULT 0"},
+		{"cpu_cores_physical", "INTEGER DEFAULT 0"},
+		{"ram_total", "INTEGER DEFAULT 0"},
+		{"ram_used", "INTEGER DEFAULT 0"},
+		{"ram_usage", "REAL DEFAULT 0"},
+		{"disk_total", "INTEGER DEFAULT 0"},
+		{"disk_used", "INTEGER DEFAULT 0"},
+		{"disk_usage", "REAL DEFAULT 0"},
+		{"net_sent", "INTEGER DEFAULT 0"},
+		{"net_recv", "INTEGER DEFAULT 0"},
+		{"uptime", "INTEGER DEFAULT 0"},
+		{"latency", "INTEGER DEFAULT 0"},
+	}
+
+	for _, col := range newColumns {
+		// 尝试添加列，如果已存在会失败，忽略错误
+		query := "ALTER TABLE devices ADD COLUMN " + col.name + " " + col.defaultValue
+		_, _ = db.Exec(query)
+	}
+
+	return nil
+}
+
 // Close 关闭数据库连接
 func Close() error {
 	if db != nil {
@@ -91,7 +179,7 @@ func Close() error {
 	return nil
 }
 
-// SaveDevice 保存或更新设备信息
+// SaveDevice 保存或更新设备信息（包含完整状态）
 func SaveDevice(device *modules.Device) error {
 	if db == nil {
 		return nil
@@ -99,10 +187,17 @@ func SaveDevice(device *modules.Device) error {
 
 	now := time.Now().Unix()
 
-	// 使用 UPSERT 语法（INSERT OR REPLACE）
+	// 使用 UPSERT 语法保存完整的设备状态
 	query := `
-	INSERT INTO devices (id, remark, os, arch, lan, wan, mac, hostname, username, offline_time, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO devices (
+		id, remark, os, arch, lan, wan, mac, hostname, username, offline_time,
+		cpu_model, cpu_usage, cpu_cores_logical, cpu_cores_physical,
+		ram_total, ram_used, ram_usage,
+		disk_total, disk_used, disk_usage,
+		net_sent, net_recv,
+		uptime, latency,
+		created_at, updated_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		remark = CASE WHEN excluded.remark != '' THEN excluded.remark ELSE devices.remark END,
 		os = excluded.os,
@@ -113,6 +208,20 @@ func SaveDevice(device *modules.Device) error {
 		hostname = excluded.hostname,
 		username = excluded.username,
 		offline_time = excluded.offline_time,
+		cpu_model = excluded.cpu_model,
+		cpu_usage = excluded.cpu_usage,
+		cpu_cores_logical = excluded.cpu_cores_logical,
+		cpu_cores_physical = excluded.cpu_cores_physical,
+		ram_total = excluded.ram_total,
+		ram_used = excluded.ram_used,
+		ram_usage = excluded.ram_usage,
+		disk_total = excluded.disk_total,
+		disk_used = excluded.disk_used,
+		disk_usage = excluded.disk_usage,
+		net_sent = excluded.net_sent,
+		net_recv = excluded.net_recv,
+		uptime = excluded.uptime,
+		latency = excluded.latency,
 		updated_at = excluded.updated_at
 	`
 
@@ -127,6 +236,20 @@ func SaveDevice(device *modules.Device) error {
 		device.Hostname,
 		device.Username,
 		device.OfflineTime,
+		device.CPU.Model,
+		device.CPU.Usage,
+		device.CPU.Cores.Logical,
+		device.CPU.Cores.Physical,
+		device.RAM.Total,
+		device.RAM.Used,
+		device.RAM.Usage,
+		device.Disk.Total,
+		device.Disk.Used,
+		device.Disk.Usage,
+		device.Net.Sent,
+		device.Net.Recv,
+		device.Uptime,
+		device.Latency,
 		now,
 		now,
 	)
@@ -175,15 +298,10 @@ func UpdateDeviceRemark(deviceID string, remark string) error {
 	return nil
 }
 
-// GetDevice 获取单个设备信息
-func GetDevice(deviceID string) (*DeviceRecord, error) {
-	if db == nil {
-		return nil, nil
-	}
-
-	query := `SELECT id, remark, os, arch, lan, wan, mac, hostname, username, offline_time, created_at, updated_at FROM devices WHERE id = ?`
-	row := db.QueryRow(query, deviceID)
-
+// scanDeviceRecord 扫描数据库行到 DeviceRecord
+func scanDeviceRecord(row interface {
+	Scan(dest ...any) error
+}) (*DeviceRecord, error) {
 	var record DeviceRecord
 	err := row.Scan(
 		&record.ID,
@@ -196,10 +314,47 @@ func GetDevice(deviceID string) (*DeviceRecord, error) {
 		&record.Hostname,
 		&record.Username,
 		&record.OfflineTime,
+		&record.CPUModel,
+		&record.CPUUsage,
+		&record.CPUCoresLogical,
+		&record.CPUCoresPhysical,
+		&record.RAMTotal,
+		&record.RAMUsed,
+		&record.RAMUsage,
+		&record.DiskTotal,
+		&record.DiskUsed,
+		&record.DiskUsage,
+		&record.NetSent,
+		&record.NetRecv,
+		&record.Uptime,
+		&record.Latency,
 		&record.CreatedAt,
 		&record.UpdatedAt,
 	)
+	return &record, err
+}
 
+// 完整的查询字段列表
+const selectAllFields = `
+	id, remark, os, arch, lan, wan, mac, hostname, username, offline_time,
+	cpu_model, cpu_usage, cpu_cores_logical, cpu_cores_physical,
+	ram_total, ram_used, ram_usage,
+	disk_total, disk_used, disk_usage,
+	net_sent, net_recv,
+	uptime, latency,
+	created_at, updated_at
+`
+
+// GetDevice 获取单个设备信息
+func GetDevice(deviceID string) (*DeviceRecord, error) {
+	if db == nil {
+		return nil, nil
+	}
+
+	query := `SELECT ` + selectAllFields + ` FROM devices WHERE id = ?`
+	row := db.QueryRow(query, deviceID)
+
+	record, err := scanDeviceRecord(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -207,7 +362,7 @@ func GetDevice(deviceID string) (*DeviceRecord, error) {
 		return nil, err
 	}
 
-	return &record, nil
+	return record, nil
 }
 
 // GetAllDevices 获取所有设备列表
@@ -216,7 +371,7 @@ func GetAllDevices() ([]*DeviceRecord, error) {
 		return nil, nil
 	}
 
-	query := `SELECT id, remark, os, arch, lan, wan, mac, hostname, username, offline_time, created_at, updated_at FROM devices ORDER BY updated_at DESC`
+	query := `SELECT ` + selectAllFields + ` FROM devices ORDER BY updated_at DESC`
 	rows, err := db.Query(query)
 	if err != nil {
 		common.Error(nil, "DB_GET_ALL_DEVICES", "fail", err.Error(), nil)
@@ -226,25 +381,11 @@ func GetAllDevices() ([]*DeviceRecord, error) {
 
 	var devices []*DeviceRecord
 	for rows.Next() {
-		var record DeviceRecord
-		err := rows.Scan(
-			&record.ID,
-			&record.Remark,
-			&record.OS,
-			&record.Arch,
-			&record.LAN,
-			&record.WAN,
-			&record.MAC,
-			&record.Hostname,
-			&record.Username,
-			&record.OfflineTime,
-			&record.CreatedAt,
-			&record.UpdatedAt,
-		)
+		record, err := scanDeviceRecord(rows)
 		if err != nil {
 			continue
 		}
-		devices = append(devices, &record)
+		devices = append(devices, record)
 	}
 
 	return devices, nil
@@ -256,7 +397,7 @@ func GetOfflineDevices() ([]*DeviceRecord, error) {
 		return nil, nil
 	}
 
-	query := `SELECT id, remark, os, arch, lan, wan, mac, hostname, username, offline_time, created_at, updated_at FROM devices WHERE offline_time > 0 ORDER BY offline_time DESC`
+	query := `SELECT ` + selectAllFields + ` FROM devices WHERE offline_time > 0 ORDER BY offline_time DESC`
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
@@ -265,25 +406,11 @@ func GetOfflineDevices() ([]*DeviceRecord, error) {
 
 	var devices []*DeviceRecord
 	for rows.Next() {
-		var record DeviceRecord
-		err := rows.Scan(
-			&record.ID,
-			&record.Remark,
-			&record.OS,
-			&record.Arch,
-			&record.LAN,
-			&record.WAN,
-			&record.MAC,
-			&record.Hostname,
-			&record.Username,
-			&record.OfflineTime,
-			&record.CreatedAt,
-			&record.UpdatedAt,
-		)
+		record, err := scanDeviceRecord(rows)
 		if err != nil {
 			continue
 		}
-		devices = append(devices, &record)
+		devices = append(devices, record)
 	}
 
 	return devices, nil
@@ -312,7 +439,7 @@ func SearchDevices(keyword string) ([]*DeviceRecord, error) {
 		return nil, nil
 	}
 
-	query := `SELECT id, remark, os, arch, lan, wan, mac, hostname, username, offline_time, created_at, updated_at 
+	query := `SELECT ` + selectAllFields + `
 	          FROM devices 
 	          WHERE id LIKE ? OR remark LIKE ? OR hostname LIKE ? 
 	          ORDER BY updated_at DESC`
@@ -326,31 +453,17 @@ func SearchDevices(keyword string) ([]*DeviceRecord, error) {
 
 	var devices []*DeviceRecord
 	for rows.Next() {
-		var record DeviceRecord
-		err := rows.Scan(
-			&record.ID,
-			&record.Remark,
-			&record.OS,
-			&record.Arch,
-			&record.LAN,
-			&record.WAN,
-			&record.MAC,
-			&record.Hostname,
-			&record.Username,
-			&record.OfflineTime,
-			&record.CreatedAt,
-			&record.UpdatedAt,
-		)
+		record, err := scanDeviceRecord(rows)
 		if err != nil {
 			continue
 		}
-		devices = append(devices, &record)
+		devices = append(devices, record)
 	}
 
 	return devices, nil
 }
 
-// DeviceRecordToModule 将数据库记录转换为 modules.Device
+// DeviceRecordToModule 将数据库记录转换为 modules.Device（包含完整状态）
 func DeviceRecordToModule(record *DeviceRecord) *modules.Device {
 	return &modules.Device{
 		ID:          record.ID,
@@ -363,5 +476,32 @@ func DeviceRecordToModule(record *DeviceRecord) *modules.Device {
 		Hostname:    record.Hostname,
 		Username:    record.Username,
 		OfflineTime: record.OfflineTime,
+		CPU: modules.CPU{
+			Model: record.CPUModel,
+			Usage: record.CPUUsage,
+			Cores: struct {
+				Logical  int `json:"logical"`
+				Physical int `json:"physical"`
+			}{
+				Logical:  record.CPUCoresLogical,
+				Physical: record.CPUCoresPhysical,
+			},
+		},
+		RAM: modules.IO{
+			Total: record.RAMTotal,
+			Used:  record.RAMUsed,
+			Usage: record.RAMUsage,
+		},
+		Disk: modules.IO{
+			Total: record.DiskTotal,
+			Used:  record.DiskUsed,
+			Usage: record.DiskUsage,
+		},
+		Net: modules.Net{
+			Sent: record.NetSent,
+			Recv: record.NetRecv,
+		},
+		Uptime:  record.Uptime,
+		Latency: record.Latency,
 	}
 }
