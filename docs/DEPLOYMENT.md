@@ -379,7 +379,7 @@ proxy_busy_buffers_size 256k;
 
 3. **增加文件描述符限制**:
 ```bash
-ulimit -n 65535
+ulimit -n 65534
 ```
 
 ---
