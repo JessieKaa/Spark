@@ -18,7 +18,8 @@ var AuthHandler gin.HandlerFunc
 func InitRouter(ctx *gin.RouterGroup) {
 	ctx.Any(`/bridge/push`, bridge.BridgePush)
 	ctx.Any(`/bridge/pull`, bridge.BridgePull)
-	ctx.Any(`/client/update`, utility.CheckUpdate) // Client, for update.
+	// TODO: for dev
+	//ctx.Any(`/client/update`, utility.CheckUpdate) // Client, for update.
 	group := ctx.Group(`/`, AuthHandler)
 	{
 		group.POST(`/device/screenshot/get`, screenshot.GetScreenshot)

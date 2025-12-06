@@ -5,6 +5,7 @@ import (
 	"Spark/server/auth"
 	"Spark/server/common"
 	"Spark/server/config"
+	"Spark/server/database"
 	"Spark/server/handler"
 	"Spark/server/handler/desktop"
 	"Spark/server/handler/terminal"
@@ -14,7 +15,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/rakyll/statik/fs"
 	"io"
 	"net"
 	"os"
@@ -23,6 +23,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/rakyll/statik/fs"
 
 	_ "Spark/server/embed/web"
 	"Spark/utils"
@@ -36,6 +38,13 @@ var blocked = cmap.New[int64]()
 var lastRequest = time.Now().Unix()
 
 func main() {
+	// 初始化数据库
+	if err := database.Init(config.Config.DatabasePath); err != nil {
+		common.Fatal(nil, `DB_INIT`, `fail`, err.Error(), nil)
+		return
+	}
+	defer database.Close()
+
 	webFS, err := fs.NewWithNamespace(`web`)
 	if err != nil {
 		common.Fatal(nil, `LOAD_STATIC_RES`, `fail`, err.Error(), nil)
@@ -221,6 +230,12 @@ func wsOnDisconnect(session *melody.Session) {
 				`ip`:   device.WAN,
 			},
 		})
+		// 保存离线时间
+		offlineTime := time.Now().Unix()
+		device.OfflineTime = offlineTime
+
+		// 保存设备离线状态到数据库
+		go database.SaveDevice(device)
 	} else {
 		common.Info(nil, `CLIENT_OFFLINE`, ``, ``, map[string]any{
 			`device`: map[string]any{
@@ -228,12 +243,13 @@ func wsOnDisconnect(session *melody.Session) {
 			},
 		})
 	}
+	// 从内存中移除设备（设备信息已保存到数据库）
 	common.Devices.Remove(session.UUID)
 }
 
 func wsHealthCheck(container *melody.Melody) {
-	const MaxIdleSeconds = 150
-	const MaxPingInterval = 60
+	const MaxIdleSeconds = 300
+	const MaxPingInterval = 120
 	go func() {
 		// Ping clients with a dynamic interval.
 		// Interval will be greater than 3 seconds and less than MaxPingInterval.

@@ -50,7 +50,8 @@ func Start() {
 			continue
 		}
 
-		checkUpdate(common.WSConn)
+		// TODO: for dev
+		//checkUpdate(common.WSConn)
 
 		err = handleWS(common.WSConn)
 		if err != nil && !stop {

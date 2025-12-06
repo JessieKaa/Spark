@@ -7,3 +7,8 @@
 dist/
 node_modules/
 .DS_Store
+# SpecStory explanation file
+.specstory/.what-is-this.md
+docker-data/config.json
+docker-data/logs
+.specstory

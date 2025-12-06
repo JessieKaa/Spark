@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  spark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spark-server:v0.0.1
+    container_name: spark-server
+    restart: unless-stopped
+    ports:
+      - "8099:8099"
+    volumes:
+      # 配置文件目录
+      - ./docker-data/config.json:/app/data/config.json:ro
+      # 数据库文件
+      - ./docker-data:/app/data
+      # 日志目录
+      - ./docker-data/logs:/app/logs
+      # 预编译客户端（可选，如果需要自定义客户端）
+      - ./built:/app/built:ro
+    environment:
+      - TZ=Asia/Shanghai
+    networks:
+      - spark-network
+    # 资源限制（可选）
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+
+networks:
+  spark-network:
+    driver: bridge
+

@@ -18,6 +18,10 @@ export default {
 	"COMMON.MINUTES": "m",
 	"COMMON.COLON": ": ",
 
+	"STATUS.DEVICE_ONLINE": "Online",
+
+	"OVERVIEW.REMARK": "Remark",
+	"OVERVIEW.OFFLINE_TIME": "Offline Time",
 	"OVERVIEW.HOSTNAME": "Hostname",
 	"OVERVIEW.USERNAME": "Username",
 	"OVERVIEW.CPU_USAGE": "CPU Usage",
@@ -48,6 +52,7 @@ export default {
 	"OVERVIEW.SHUTDOWN": "Shutdown",
 	"OVERVIEW.OFFLINE": "Offline",
 	"OVERVIEW.GENERATE": "Generate Client",
+	"OVERVIEW.SEARCH_PLACEHOLDER": "Search ID or Remark",
 	"OVERVIEW.OPERATION_CONFIRM": "Are you sure to {0} this device?",
 	"OVERVIEW.OPERATION_SUCCESS": "Operation executed",
 
@@ -99,6 +104,7 @@ export default {
 	"GENERATOR.PORT": "Port",
 	"GENERATOR.PATH": "Path",
 	"GENERATOR.OS_ARCH": "OS / Arch",
+	"GENERATOR.REMARK": "Remark",
 	"GENERATOR.NO_PREBUILT_FOUND": "The OS or Arch is not prebuilt",
 	"GENERATOR.CONFIG_GENERATE_FAILED": "Failed to generate client config",
 	"GENERATOR.CONFIG_TOO_LARGE": "Config is too large",

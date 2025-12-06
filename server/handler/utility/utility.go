@@ -4,17 +4,20 @@ import (
 	"Spark/modules"
 	"Spark/server/common"
 	"Spark/server/config"
+	"Spark/server/database"
+	"Spark/server/embed/devices"
 	"Spark/utils"
 	"Spark/utils/melody"
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Sender func(pack modules.Packet, session *melody.Session) bool
@@ -85,12 +88,35 @@ func OnDevicePack(data []byte, session *melody.Session) error {
 		if len(exSession) > 0 {
 			common.Devices.Remove(exSession)
 		}
+
+		// 从数据库中读取设备的备注信息（如果存在）
+		if existingDevice, err := database.GetDevice(pack.Device.ID); err == nil && existingDevice != nil {
+			// 如果客户端没有传备注，使用数据库中保存的备注
+			if len(pack.Device.Remark) == 0 && len(existingDevice.Remark) > 0 {
+				pack.Device.Remark = existingDevice.Remark
+			}
+		}
+
+		pack.Device.OfflineTime = 0
 		common.Devices.Set(session.UUID, &pack.Device)
 		common.Info(nil, `CLIENT_ONLINE`, ``, ``, map[string]any{
 			`device`: map[string]any{
 				`name`: pack.Device.Hostname,
 				`ip`:   pack.Device.WAN,
 			},
+		})
+
+		// 保存设备信息到数据库
+		go database.SaveDevice(&pack.Device)
+
+		// 兼容旧的JSON文件存储（可选，后续可移除）
+		go devices.WriteDeviceInfo(&devices.DeviceInfo{
+			ID:       pack.Device.ID,
+			Os:       pack.Device.OS,
+			Arch:     pack.Device.Arch,
+			Hostname: pack.Device.Hostname,
+			Username: pack.Device.Username,
+			Remark:   pack.Device.Remark,
 		})
 	} else {
 		device, ok := common.Devices.Get(session.UUID)
@@ -263,14 +289,31 @@ func ExecDeviceCmd(ctx *gin.Context) {
 	}
 }
 
-// GetDevices will return all info about all clients.
+// GetDevices will return all info about all clients (online and offline).
 func GetDevices(ctx *gin.Context) {
-	devices := map[string]any{}
+	devicesMap := map[string]any{}
+
+	// 首先从内存中获取在线设备
+	onlineDeviceIDs := make(map[string]bool)
 	common.Devices.IterCb(func(uuid string, device *modules.Device) bool {
-		devices[uuid] = *device
+		devicesMap[uuid] = *device
+		onlineDeviceIDs[device.ID] = true
 		return true
 	})
-	ctx.JSON(http.StatusOK, modules.Packet{Code: 0, Data: devices})
+
+	// 然后从数据库中获取离线设备
+	offlineDevices, err := database.GetOfflineDevices()
+	if err == nil && offlineDevices != nil {
+		for _, record := range offlineDevices {
+			// 只添加不在线的设备
+			if !onlineDeviceIDs[record.ID] {
+				// 使用设备ID作为key（因为离线设备没有session UUID）
+				devicesMap["offline_"+record.ID] = *database.DeviceRecordToModule(record)
+			}
+		}
+	}
+
+	ctx.JSON(http.StatusOK, modules.Packet{Code: 0, Data: devicesMap})
 }
 
 // CallDevice will call client with command from browser.

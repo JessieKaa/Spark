@@ -18,6 +18,10 @@ export default {
 	"COMMON.MINUTES": "分钟",
 	"COMMON.COLON": "：",
 
+	"STATUS.DEVICE_ONLINE": "在线",
+
+	"OVERVIEW.REMARK": "备注",
+	"OVERVIEW.OFFLINE_TIME": "离线时间",
 	"OVERVIEW.HOSTNAME": "主机名",
 	"OVERVIEW.USERNAME": "用户名",
 	"OVERVIEW.CPU_USAGE": "CPU使用率",
@@ -48,6 +52,7 @@ export default {
 	"OVERVIEW.SHUTDOWN": "关机",
 	"OVERVIEW.OFFLINE": "离线",
 	"OVERVIEW.GENERATE": "生成客户端",
+	"OVERVIEW.SEARCH_PLACEHOLDER": "搜索 ID 或备注",
 	"OVERVIEW.OPERATION_CONFIRM": "确定要{0}该设备吗？",
 	"OVERVIEW.OPERATION_SUCCESS": "操作已执行",
 
@@ -99,6 +104,7 @@ export default {
 	"GENERATOR.PORT": "端口",
 	"GENERATOR.PATH": "路径",
 	"GENERATOR.OS_ARCH": "操作系统/架构",
+	"GENERATOR.REMARK": "备注",
 	"GENERATOR.NO_PREBUILT_FOUND": "该操作系统或架构的客户端未预编译",
 	"GENERATOR.CONFIG_GENERATE_FAILED": "配置文件生成失败",
 	"GENERATOR.CONFIG_TOO_LARGE": "配置文件过大",

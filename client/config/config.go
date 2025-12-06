@@ -17,6 +17,7 @@ var Config struct {
 	Path   string `json:"path"`
 	UUID   string `json:"uuid"`
 	Key    string `json:"key"`
+	Remark string `json:"remark"`
 }
 
 func GetBaseURL(ws bool) string {

@@ -27,7 +27,8 @@ function Generate(props) {
 			host: location.hostname,
 			port: location.port,
 			path: location.pathname,
-			ArchOS: ['windows', 'amd64']
+			ArchOS: ['windows', 'amd64'],
+			remark: "",
 		};
 		if (String(location.port).length === 0) {
 			initValues.port = location.protocol === 'https:' ? 443 : 80;
@@ -84,6 +85,16 @@ function Generate(props) {
 					request={() => prebuilt}
 					rules={[{
 						required: true
+					}]}
+				/>
+			</ProFormGroup>
+			<ProFormGroup>
+				<ProFormText
+					width="md"
+					name="remark"
+					label={i18n.t('GENERATOR.REMARK')}
+					rules={[{
+						required: false
 					}]}
 				/>
 			</ProFormGroup>

@@ -24,6 +24,7 @@ type clientCfg struct {
 	Path   string `json:"path"`
 	UUID   string `json:"uuid"`
 	Key    string `json:"key"`
+	Remark string `json:"remark"`
 }
 
 var (
@@ -38,6 +39,7 @@ func CheckClient(ctx *gin.Context) {
 		Port   uint16 `json:"port" yaml:"port" form:"port" binding:"required"`
 		Path   string `json:"path" yaml:"path" form:"path" binding:"required"`
 		Secure string `json:"secure" yaml:"secure" form:"secure"`
+		Remark string `json:"remark" yaml:"remark" form:"remark"`
 	}
 	if err := ctx.ShouldBind(&form); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, modules.Packet{Code: -1, Msg: `${i18n|COMMON.INVALID_PARAMETER}`})
@@ -55,6 +57,7 @@ func CheckClient(ctx *gin.Context) {
 		Path:   form.Path,
 		UUID:   strings.Repeat(`FF`, 16),
 		Key:    strings.Repeat(`FF`, 32),
+		Remark: form.Remark,
 	})
 	if err != nil {
 		if err == ErrTooLargeEntity {
@@ -75,6 +78,7 @@ func GenerateClient(ctx *gin.Context) {
 		Port   uint16 `json:"port" yaml:"port" form:"port" binding:"required"`
 		Path   string `json:"path" yaml:"path" form:"path" binding:"required"`
 		Secure string `json:"secure" yaml:"secure" form:"secure"`
+		Remark string `json:"remark" yaml:"remark" form:"remark"`
 	}
 	if err := ctx.ShouldBind(&form); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, modules.Packet{Code: -1, Msg: `${i18n|COMMON.INVALID_PARAMETER}`})
@@ -99,6 +103,7 @@ func GenerateClient(ctx *gin.Context) {
 		Path:   form.Path,
 		UUID:   hex.EncodeToString(clientUUID),
 		Key:    hex.EncodeToString(clientKey),
+		Remark: form.Remark,
 	})
 	if err != nil {
 		if err == ErrTooLargeEntity {

@@ -1,0 +1,14 @@
+{
+    "listen": ":8000",
+    "salt": "your-secret-salt-here",
+    "auth": {
+        "admin": "$sha256$your-password-hash-here"
+    },
+    "log": {
+        "level": "info",
+        "path": "/app/logs",
+        "days": 7
+    },
+    "database_path": "/app/data/spark.db"
+}
+

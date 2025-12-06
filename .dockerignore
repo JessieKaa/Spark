@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+.specstory
+
+# 文档
+docs/
+*.md
+!README.md
+
+# 构建产物
+releases/
+*.exe
+*.tmp
+
+# 前端依赖（会在Docker中重新安装）
+web/node_modules/
+web/dist/
+
+# 日志和数据
+logs/
+*.log
+*.db
+docker-data/
+
+# 配置文件（敏感信息）
+config.json
+Config.json
+device_info.json
+
+# 测试文件
+*_test.go
+*.test
+
+# MacOS
+.DS_Store
+
+# 许可证目录（保留主LICENSE）
+licenses/
+
