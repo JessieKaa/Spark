@@ -56,10 +56,11 @@ RUN go build -ldflags="-s -w" -o spark-server ./server
 RUN mkdir -p built && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o built/linux_amd64 ./client && \
     CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o built/linux_arm64 ./client && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -ldflags="-s -w" -o built/linux_arm ./client && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o built/linux_i386 ./client && \
-    CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o built/windows_amd64 ./client && \
-    CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o built/windows_i386 ./client
+    CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -ldflags="-s -w" -o built/linux_arm ./client 
+    # && \
+    # CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o built/linux_i386 ./client && \
+    # CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o built/windows_amd64 ./client && \
+    # CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags="-s -w" -o built/windows_i386 ./client
 
 # ============================================
 # 阶段3: 最终运行镜像
