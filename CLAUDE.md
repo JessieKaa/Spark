@@ -75,7 +75,7 @@ cd web && npm install && npm start  # webpack-dev-server on :8080
 
 - **Build tags**: Server uses `-tags=jsoniter` for fast JSON serialization
 - **ldflags**: Both server and client inject git commit via `-X 'Spark/{server,client}/config.Commit=$COMMIT'`
-- **Client binary generation**: Server patches a pre-built client binary with encrypted config (server address, auth key) via the `/api/generate` endpoint
+- **Client binary generation**: Server patches a pre-built client binary with encrypted config (server address, auth key) via the `/api/client/generate` endpoint
 - **WebSocket protocol**: Server acts as bridge between browser (REST API) and client (WS). Event callback system maps requests to responses with timeouts
 - **Encryption**: All client-server WS traffic uses AES-CTR with per-session 32-byte secrets. Large data (desktop frames, files) falls back to HTTP bridge
 - **Cross-compilation**: Client supports linux/windows on arm/arm64/amd64/i386; server currently builds linux/amd64 only

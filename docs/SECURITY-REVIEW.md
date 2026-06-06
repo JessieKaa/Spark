@@ -16,7 +16,7 @@
 
 路径解析为 `./built/../../etc_passwd` → `/etc_passwd`。通过调整 `../` 层数，可以读取服务器文件系统上的任意文件（如 `/etc/shadow`、配置文件、密钥文件等），内容以 `application/octet-stream` 下载形式返回。`CheckClient`（utility.go:158）中存在相同模式。
 
-**Recommendation:** 对 `form.OS` 和 `form.Arch` 做白名单校验（仅允许 `windows`/`linux`/`darwin` 和 `amd64`/`arm64`/`386`/`arm`），或使用 `filepath.Clean()` 后检查路径是否仍在 `./built/` 目录内。
+**Recommendation:** 对 `form.OS` 和 `form.Arch` 做白名单校验（仅允许 `windows`/`linux`/`darwin` 和 `amd64`/`arm64`/`i386`/`arm`），或使用 `filepath.Clean()` 后检查路径是否仍在 `./built/` 目录内。
 
 ---
 
