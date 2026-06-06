@@ -31,6 +31,18 @@ var Commit = ``
 var Config config
 var BuiltPath = `./built/%v_%v`
 
+var ValidOS = map[string]bool{
+	`linux`:   true,
+	`windows`: true,
+	`darwin`:  true,
+}
+var ValidArch = map[string]bool{
+	`amd64`: true,
+	`arm64`: true,
+	`i386`:  true,
+	`arm`:   true,
+}
+
 func init() {
 	golog.SetTimeFormat(`2006/01/02 15:04:05`)
 

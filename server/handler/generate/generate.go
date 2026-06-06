@@ -45,6 +45,10 @@ func CheckClient(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, modules.Packet{Code: -1, Msg: `${i18n|COMMON.INVALID_PARAMETER}`})
 		return
 	}
+	if !config.ValidOS[form.OS] || !config.ValidArch[form.Arch] {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, modules.Packet{Code: -1, Msg: `${i18n|COMMON.INVALID_PARAMETER}`})
+		return
+	}
 	_, err := os.Stat(fmt.Sprintf(config.BuiltPath, form.OS, form.Arch))
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, modules.Packet{Code: 1, Msg: `${i18n|GENERATOR.NO_PREBUILT_FOUND}`})
@@ -81,6 +85,10 @@ func GenerateClient(ctx *gin.Context) {
 		Remark string `json:"remark" yaml:"remark" form:"remark"`
 	}
 	if err := ctx.ShouldBind(&form); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, modules.Packet{Code: -1, Msg: `${i18n|COMMON.INVALID_PARAMETER}`})
+		return
+	}
+	if !config.ValidOS[form.OS] || !config.ValidArch[form.Arch] {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, modules.Packet{Code: -1, Msg: `${i18n|COMMON.INVALID_PARAMETER}`})
 		return
 	}

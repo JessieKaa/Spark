@@ -143,6 +143,10 @@ func CheckUpdate(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, modules.Packet{Code: -1, Msg: `${i18n|COMMON.INVALID_PARAMETER}`})
 		return
 	}
+	if !config.ValidOS[form.OS] || !config.ValidArch[form.Arch] {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, modules.Packet{Code: -1, Msg: `${i18n|COMMON.INVALID_PARAMETER}`})
+		return
+	}
 	if form.Commit == config.Commit {
 		ctx.JSON(http.StatusOK, modules.Packet{Code: 0})
 		common.Warn(ctx, `CLIENT_UPDATE`, `success`, `latest`, map[string]any{
